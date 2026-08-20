@@ -1,4 +1,4 @@
-KTPE Development Setup
+TKPE Development Setup
 ======================
 
 1. Open the GitHub repository.

@@ -1,15 +1,13 @@
 <?php
 /**
- * KTPE admin footer.
+ * KTPE admin page footer.
  *
  * @package TajirKendro_Price_Editor
  */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 ?>
-
-<div class="footer">
-
-	<h1>
-		<?php esc_html_e( 'TajirKendro Price Editor Footer will be here', 'tajirkendro-price-editor' ); ?>
-	</h1>
 
 </div>

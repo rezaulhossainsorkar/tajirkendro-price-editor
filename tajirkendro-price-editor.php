@@ -23,32 +23,33 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Plugin constants.
  */
-define( 'KTPE_VERSION', '1.0.0' );
-define( 'KTPE_PLUGIN_FILE', __FILE__ );
-define( 'KTPE_PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
-define( 'KTPE_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+define( 'TKPE_VERSION', '1.0.0' );
+define( 'TKPE_PLUGIN_FILE', __FILE__ );
+define( 'TKPE_PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
+define( 'TKPE_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
 
 /**
  * Load plugin files.
  */
-function ktpe_load_files() {
+function tkpe_load_files() {
 
-	require_once KTPE_PLUGIN_PATH . 'includes/admin/admin-menu.php';
-	require_once KTPE_PLUGIN_PATH . 'includes/admin/admin-page.php';
+	require_once TKPE_PLUGIN_PATH . 'includes/admin/admin-menu.php';
+	require_once TKPE_PLUGIN_PATH . 'includes/admin/admin-page.php';
+	require_once TKPE_PLUGIN_PATH . 'includes/api/products.php';
 
 }
 
-ktpe_load_files();
+tkpe_load_files();
 
 
 /**
- * Initialize KTPE.
+ * Initialize TKPE.
  */
-function ktpe_init() {
+function tkpe_init() {
 
-	// KTPE initialization will go here.
+	// TKPE initialization will go here.
 
 }
 
-add_action( 'plugins_loaded', 'ktpe_init' );
+add_action( 'plugins_loaded', 'tkpe_init' );
