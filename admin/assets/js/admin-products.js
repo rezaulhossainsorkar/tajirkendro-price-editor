@@ -8,7 +8,7 @@
 	const state = {
 		products: [],
 		currentPage: 1,
-		productsPerPage: 20,
+		productsPerPage: 10,
 		totalProducts: 0,
 		totalPages: 0,
 		search: '',
@@ -94,8 +94,8 @@
 	function handlePerPageChange() {
 		const selectedValue = parseInt(elements.productsPerPage.value, 10);
 
-		if ([20, 50, 100].indexOf(selectedValue) === -1) {
-			state.productsPerPage = 20;
+		if ([10, 20, 30, 50].indexOf(selectedValue) === -1) {
+			state.productsPerPage = 10;
 		} else {
 			state.productsPerPage = selectedValue;
 		}
@@ -237,7 +237,7 @@
 			const row = document.createElement('tr');
 			const cell = document.createElement('td');
 
-			cell.colSpan = 6;
+			cell.colSpan = 7;
 			cell.className = 'tkpe-table-message';
 			cell.textContent = tkpeAdmin.i18n.noProducts;
 
@@ -325,6 +325,14 @@
 		row.appendChild(categoryCell);
 
 		/**
+		 * Product type.
+		 */
+		const typeCell = document.createElement('td');
+		typeCell.appendChild(createTypeBadge(product.type));
+
+		row.appendChild(typeCell);
+
+		/**
 		 * Status.
 		 */
 		const statusCell = document.createElement('td');
@@ -379,6 +387,38 @@
 		badge.textContent = formatStockStatus(status);
 
 		return badge;
+	}
+
+		/**
+	 * Create a product type badge.
+	 *
+	 * @param {string} type Product type.
+	 * @returns {HTMLSpanElement} Type badge.
+	 */
+	function createTypeBadge(type) {
+		const badge = document.createElement('span');
+
+		badge.className = 'tkpe-type-badge';
+		badge.textContent = formatProductType(type);
+
+		return badge;
+	}
+
+	/**
+	 * Format a product type.
+	 *
+	 * @param {string} type Product type.
+	 * @returns {string} Human-readable product type.
+	 */
+	function formatProductType(type) {
+		const labels = {
+			simple: 'Simple',
+			variable: 'Variable',
+			grouped: 'Grouped',
+			external: 'External',
+		};
+
+		return labels[type] || type || '—';
 	}
 
 	/**
@@ -752,7 +792,7 @@
 		const row = document.createElement('tr');
 		const cell = document.createElement('td');
 
-		cell.colSpan = 6;
+		cell.colSpan = 7;
 		cell.className = 'tkpe-table-message tkpe-error-message';
 		cell.textContent = tkpeAdmin.i18n.error;
 

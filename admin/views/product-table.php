@@ -54,6 +54,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 					</th>
 
 					<th scope="col">
+						<?php esc_html_e( 'Type', 'tajirkendro-price-editor' ); ?>
+					</th>
+
+					<th scope="col">
 						<?php esc_html_e( 'Status', 'tajirkendro-price-editor' ); ?>
 					</th>
 
@@ -69,7 +73,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 			<tbody id="tkpe-product-rows">
 				<tr class="tkpe-empty-row">
-					<td colspan="6">
+					<td colspan="7">
 						<?php esc_html_e( 'Loading products…', 'tajirkendro-price-editor' ); ?>
 					</td>
 				</tr>
