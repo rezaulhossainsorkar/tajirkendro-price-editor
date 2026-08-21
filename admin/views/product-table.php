@@ -1,6 +1,6 @@
 <?php
 /**
- * KTPE product table.
+ * TKPE product table.
  *
  * @package TajirKendro_Price_Editor
  */

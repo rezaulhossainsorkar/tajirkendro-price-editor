@@ -273,7 +273,7 @@ function tkpe_get_products_rest( WP_REST_Request $request ) {
 	);
 
 	if ( '' !== $search ) {
-		$query_args['search'] = $search;
+		$query_args['s'] = $search;
 	}
 
 	if ( '' !== $category ) {
