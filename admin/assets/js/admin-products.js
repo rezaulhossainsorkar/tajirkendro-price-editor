@@ -41,6 +41,28 @@ jQuery(document).ready(function ($) {
 
 
 	/**
+	 * Get the currently active tab.
+	 *
+	 * Bulk Edit is used only as a fallback for the
+	 * initial state.
+	 *
+	 * @return {string} Current tab.
+	 */
+	function tkpe_get_current_tab() {
+
+		var tab = $(
+			'.tkpe-tab-button.is-active'
+		).data('tab');
+
+		if ('quick' === tab) {
+			return 'quick';
+		}
+
+		return 'bulk';
+	}
+
+
+	/**
 	 * Load search suggestions.
 	 *
 	 * @param {string} search Search term.
@@ -164,8 +186,6 @@ jQuery(document).ready(function ($) {
 
 	/**
 	 * Load selected product.
-	 *
-	 * @param {number} productId Product ID.
 	 */
 	$(document).on(
 		'click',
@@ -306,12 +326,6 @@ jQuery(document).ready(function ($) {
 
 	/**
 	 * Apply filters.
-	 *
-	 * The selected filter values are captured first.
-	 * The current result state is then reset before
-	 * the new filter request is sent.
-	 *
-	 * Search remains completely independent.
 	 */
 	$('#tkpe-filter-form').on('submit', function (event) {
 
@@ -338,9 +352,7 @@ jQuery(document).ready(function ($) {
 		/*
 		 * Reset the current result state first.
 		 *
-		 * The filter form itself is deliberately
-		 * not reset because these are the values
-		 * we are about to apply.
+		 * The current tab is preserved.
 		 */
 		tkpe_reset_results();
 
@@ -356,8 +368,7 @@ jQuery(document).ready(function ($) {
 	/**
 	 * Reset current product results.
 	 *
-	 * This resets the current result state only.
-	 * Filter values are preserved.
+	 * The currently active tab is preserved.
 	 */
 	function tkpe_reset_results() {
 
@@ -399,19 +410,21 @@ jQuery(document).ready(function ($) {
 
 
 		/*
-		 * Hide both tabs.
+		 * Keep whichever tab the user is currently on.
 		 */
-		$('#tkpe-bulk-tab').prop('hidden', true);
-		$('#tkpe-quick-tab').prop('hidden', true);
+		var currentTab = tkpe_get_current_tab();
 
+		if ('quick' === currentTab) {
 
-		/*
-		 * Always make Bulk Edit the default tab.
-		 */
-		$('.tkpe-tab-button').removeClass('is-active');
+			$('#tkpe-bulk-tab').prop('hidden', true);
+			$('#tkpe-quick-tab').prop('hidden', false);
 
-		$('.tkpe-tab-button[data-tab="bulk"]')
-			.addClass('is-active');
+		} else {
+
+			$('#tkpe-bulk-tab').prop('hidden', false);
+			$('#tkpe-quick-tab').prop('hidden', true);
+
+		}
 
 	}
 
@@ -480,15 +493,14 @@ jQuery(document).ready(function ($) {
 
 
 		/*
-		 * Clear the search field as well because
-		 * Reset means returning the whole UI to
-		 * its initial state.
+		 * Clear the search field.
 		 */
 		$('#tkpe-search').val('');
 
 
 		/*
-		 * Reset displayed results.
+		 * Reset displayed results while
+		 * preserving the current tab.
 		 */
 		tkpe_reset_results();
 
@@ -498,31 +510,49 @@ jQuery(document).ready(function ($) {
 	/**
 	 * Render product tables.
 	 *
-	 * Bulk Edit is always the default tab.
+	 * The currently active tab remains active.
 	 *
 	 * @param {Array} products Products.
 	 */
 	function tkpe_render_products(products) {
 
+		/*
+		 * Remember the current tab before rendering.
+		 */
+		var currentTab = tkpe_get_current_tab();
+
+
+		/*
+		 * Render both table datasets.
+		 */
 		tkpe_render_bulk_products(products);
 		tkpe_render_quick_products(products);
 
 
 		/*
-		 * Always activate Bulk Edit when a new
-		 * result set has been rendered.
+		 * Restore the user's current tab.
 		 */
-		$('.tkpe-tab-button').removeClass('is-active');
+		if ('quick' === currentTab) {
 
-		$('.tkpe-tab-button[data-tab="bulk"]')
-			.addClass('is-active');
+			$('.tkpe-tab-button').removeClass('is-active');
 
+			$('.tkpe-tab-button[data-tab="quick"]')
+				.addClass('is-active');
 
-		/*
-		 * Show Bulk Edit by default.
-		 */
-		$('#tkpe-bulk-tab').prop('hidden', false);
-		$('#tkpe-quick-tab').prop('hidden', true);
+			$('#tkpe-bulk-tab').prop('hidden', true);
+			$('#tkpe-quick-tab').prop('hidden', false);
+
+		} else {
+
+			$('.tkpe-tab-button').removeClass('is-active');
+
+			$('.tkpe-tab-button[data-tab="bulk"]')
+				.addClass('is-active');
+
+			$('#tkpe-bulk-tab').prop('hidden', false);
+			$('#tkpe-quick-tab').prop('hidden', true);
+
+		}
 
 	}
 
@@ -718,329 +748,351 @@ jQuery(document).ready(function ($) {
 	}
 
 
-/**
- * Price cell.
- *
- * @param {Object} product Product.
- * @return {jQuery} Price cell.
- */
-function tkpe_price_cell(product) {
-
-	var $cell = $('<td>', {
-		class: 'tkpe-price-cell'
-	});
-
-
-	/*
-	 * Variable products use variation prices
-	 * instead of a single parent price.
+	/**
+	 * Price cell.
+	 *
+	 * @param {Object} product Product.
+	 * @return {jQuery} Price cell.
 	 */
-	if ('variable' === product.type) {
+	function tkpe_price_cell(product) {
 
-		$cell.append(
-			tkpe_variation_price_preview(product)
-		);
+		var $cell = $('<td>', {
+			class: 'tkpe-price-cell'
+		});
+
+
+		/*
+		 * Variable products use variation prices
+		 * instead of a single parent price.
+		 */
+		if ('variable' === product.type) {
+
+			$cell.append(
+				tkpe_variation_price_preview(product)
+			);
+
+			return $cell;
+		}
+
+
+		/*
+		 * Regular product price.
+		 */
+		if (product.regular_price) {
+
+			$cell.append(
+				$('<div>', {
+					class: 'tkpe-regular-price',
+					text: 'Regular: ' + product.regular_price
+				})
+			);
+
+		}
+
+
+		/*
+		 * Sale product price.
+		 */
+		if (product.sale_price) {
+
+			$cell.append(
+				$('<div>', {
+					class: 'tkpe-sale-price',
+					text: 'Sale: ' + product.sale_price
+				})
+			);
+
+		}
+
+
+		/*
+		 * Product has no price.
+		 */
+		if (
+			! product.regular_price &&
+			! product.sale_price
+		) {
+
+			$cell.text('—');
+
+		}
+
 
 		return $cell;
 	}
 
 
-	/*
-	 * Regular product price.
+	/**
+	 * Build variable-product variation price preview.
+	 *
+	 * @param {Object} product Product.
+	 * @return {jQuery} Variation price preview.
 	 */
-	if (product.regular_price) {
+	function tkpe_variation_price_preview(product) {
 
-		$cell.append(
-			$('<div>', {
-				class: 'tkpe-regular-price',
-				text: 'Regular: ' + product.regular_price
-			})
-		);
-
-	}
+		var $wrapper = $('<div>', {
+			class: 'tkpe-variation-price-preview'
+		});
 
 
-	/*
-	 * Sale product price.
-	 */
-	if (product.sale_price) {
-
-		$cell.append(
-			$('<div>', {
-				class: 'tkpe-sale-price',
-				text: 'Sale: ' + product.sale_price
-			})
-		);
-
-	}
+		var $trigger = $('<button>', {
+			type: 'button',
+			class: 'button-link tkpe-show-variation-prices',
+			text: 'Show variation prices'
+		});
 
 
-	/*
-	 * Product has no price.
-	 */
-	if (
-		! product.regular_price &&
-		! product.sale_price
-	) {
-
-		$cell.text('—');
-
-	}
+		var $card = $('<div>', {
+			class: 'tkpe-variation-price-card',
+			hidden: true
+		});
 
 
-	return $cell;
-}
+		var $title = $('<strong>', {
+			class: 'tkpe-variation-price-title',
+			text: 'Variation prices'
+		});
 
 
-/**
- * Build variable-product variation price preview.
- *
- * @param {Object} product Product.
- * @return {jQuery} Variation price preview.
- */
-function tkpe_variation_price_preview(product) {
-
-	var $wrapper = $('<div>', {
-		class: 'tkpe-variation-price-preview'
-	});
+		var $list = $('<div>', {
+			class: 'tkpe-variation-price-list'
+		});
 
 
-	var $trigger = $('<button>', {
-		type: 'button',
-		class: 'button-link tkpe-show-variation-prices',
-		text: 'Show variation prices'
-	});
+		/*
+		 * No variations.
+		 */
+		if (
+			! $.isArray(product.variations) ||
+			! product.variations.length
+		) {
+
+			$list.append(
+				$('<div>', {
+					class: 'tkpe-no-variation-prices',
+					text: 'No variation prices available.'
+				})
+			);
+
+		} else {
+
+			$.each(
+				product.variations,
+				function (index, variation) {
+
+					var $item = $('<div>', {
+						class: 'tkpe-variation-price-item'
+					});
 
 
-	var $card = $('<div>', {
-		class: 'tkpe-variation-price-card',
-		hidden: true
-	});
+					var $attributes = $('<div>', {
+						class: 'tkpe-variation-attributes'
+					});
 
 
-	var $title = $('<strong>', {
-		class: 'tkpe-variation-price-title',
-		text: 'Variation prices'
-	});
+					var attributeText = [];
 
 
-	var $list = $('<div>', {
-		class: 'tkpe-variation-price-list'
-	});
+					$.each(
+						variation.attributes || [],
+						function (attributeIndex, attribute) {
+
+							attributeText.push(
+								attribute.name +
+								': ' +
+								attribute.value
+							);
+
+						}
+					);
 
 
-	/*
-	 * No variations.
-	 */
-	if (
-		! $.isArray(product.variations) ||
-		! product.variations.length
-	) {
+					if (attributeText.length) {
 
-		$list.append(
-			$('<div>', {
-				class: 'tkpe-no-variation-prices',
-				text: 'No variation prices available.'
-			})
-		);
+						$attributes.text(
+							attributeText.join(' / ')
+						);
 
-	} else {
+					} else {
 
-		$.each(
-			product.variations,
-			function (index, variation) {
-
-				var $item = $('<div>', {
-					class: 'tkpe-variation-price-item'
-				});
-
-
-				var $attributes = $('<div>', {
-					class: 'tkpe-variation-attributes'
-				});
-
-
-				var attributeText = [];
-
-
-				$.each(
-					variation.attributes || [],
-					function (attributeIndex, attribute) {
-
-						attributeText.push(
-							attribute.name +
-							': ' +
-							attribute.value
+						$attributes.text(
+							'Variation #' + variation.id
 						);
 
 					}
-				);
 
 
-				if (attributeText.length) {
-
-					$attributes.text(
-						attributeText.join(' / ')
-					);
-
-				} else {
-
-					$attributes.text(
-						'Variation #' + variation.id
-					);
-
-				}
+					var $prices = $('<div>', {
+						class: 'tkpe-variation-prices'
+					});
 
 
-				var $prices = $('<div>', {
-					class: 'tkpe-variation-prices'
-				});
+					if (variation.regular_price) {
+
+						$prices.append(
+							$('<span>', {
+								class: 'tkpe-variation-regular-price',
+								text:
+									'Regular: ' +
+									variation.regular_price
+							})
+						);
+
+					}
 
 
-				if (variation.regular_price) {
+					if (variation.sale_price) {
 
-					$prices.append(
-						$('<span>', {
-							class: 'tkpe-variation-regular-price',
-							text:
-								'Regular: ' +
-								variation.regular_price
-						})
-					);
+						$prices.append(
+							$('<span>', {
+								class: 'tkpe-variation-sale-price',
+								text:
+									'Sale: ' +
+									variation.sale_price
+							})
+						);
 
-				}
-
-
-				if (variation.sale_price) {
-
-					$prices.append(
-						$('<span>', {
-							class: 'tkpe-variation-sale-price',
-							text:
-								'Sale: ' +
-								variation.sale_price
-						})
-					);
-
-				}
+					}
 
 
-				if (
-					! variation.regular_price &&
-					! variation.sale_price
-				) {
+					if (
+						! variation.regular_price &&
+						! variation.sale_price
+					) {
 
-					$prices.append(
-						$('<span>', {
-							class: 'tkpe-variation-no-price',
-							text: 'No price'
-						})
-					);
+						$prices.append(
+							$('<span>', {
+								class: 'tkpe-variation-no-price',
+								text: 'No price'
+							})
+						);
+
+					}
+
+
+					$item
+						.append($attributes)
+						.append($prices);
+
+
+					$list.append($item);
 
 				}
+			);
+
+		}
 
 
-				$item
-					.append($attributes)
-					.append($prices);
+		$card
+			.append($title)
+			.append($list);
 
 
-				$list.append($item);
+		$wrapper
+			.append($trigger)
+			.append($card);
+
+
+		/*
+		 * Show card.
+		 */
+		$wrapper.on(
+			'mouseenter',
+			function () {
+
+				$card.prop('hidden', false);
 
 			}
 		);
 
+
+		/*
+		 * Hide card.
+		 */
+		$wrapper.on(
+			'mouseleave',
+			function () {
+
+				$card.prop('hidden', true);
+
+			}
+		);
+
+
+		/*
+		 * Keyboard accessibility.
+		 */
+		$trigger.on(
+			'focus',
+			function () {
+
+				$card.prop('hidden', false);
+
+			}
+		);
+
+
+		$trigger.on(
+			'blur',
+			function () {
+
+				setTimeout(
+					function () {
+
+						if (
+							! $wrapper.find(':focus').length
+						) {
+
+							$card.prop('hidden', true);
+
+						}
+
+					},
+					100
+				);
+
+			}
+		);
+
+
+		return $wrapper;
 	}
-
-
-	$card
-		.append($title)
-		.append($list);
-
-
-	$wrapper
-		.append($trigger)
-		.append($card);
-
-
-	/*
-	 * Show card.
-	 */
-	$wrapper.on(
-		'mouseenter',
-		function () {
-
-			$card.prop('hidden', false);
-
-		}
-	);
-
-
-	/*
-	 * Hide card.
-	 */
-	$wrapper.on(
-		'mouseleave',
-		function () {
-
-			$card.prop('hidden', true);
-
-		}
-	);
-
-
-	/*
-	 * Keyboard accessibility.
-	 */
-	$trigger.on(
-		'focus',
-		function () {
-
-			$card.prop('hidden', false);
-
-		}
-	);
-
-
-	$trigger.on(
-		'blur',
-		function () {
-
-			/*
-			 * Delay slightly so moving focus
-			 * into the card does not immediately
-			 * hide it.
-			 */
-			setTimeout(
-				function () {
-
-					if (
-						! $wrapper.find(':focus').length
-					) {
-
-						$card.prop('hidden', true);
-
-					}
-
-				},
-				100
-			);
-
-		}
-	);
-
-
-	return $wrapper;
-}
 
 
 	/**
 	 * Show table loading state.
+	 *
+	 * The currently active tab determines which
+	 * table is displayed while loading.
 	 */
 	function tkpe_show_loading() {
 
+		var currentTab = tkpe_get_current_tab();
+
+
 		/*
-		 * Bulk Edit is always the loading/default tab.
+		 * Quick Edit is currently active.
+		 */
+		if ('quick' === currentTab) {
+
+			$('.tkpe-tab-button').removeClass('is-active');
+
+			$('.tkpe-tab-button[data-tab="quick"]')
+				.addClass('is-active');
+
+			$('#tkpe-bulk-tab').prop('hidden', true);
+			$('#tkpe-quick-tab').prop('hidden', false);
+
+			$('#tkpe-quick-products').html(
+				'<tr><td colspan="6" class="tkpe-loading">Loading products...</td></tr>'
+			);
+
+			return;
+		}
+
+
+		/*
+		 * Bulk Edit is currently active.
 		 */
 		$('.tkpe-tab-button').removeClass('is-active');
 
@@ -1058,7 +1110,55 @@ function tkpe_variation_price_preview(product) {
 
 
 	/**
+	 * Refresh the current table using the existing
+	 * search/filter configuration.
+	 */
+	function tkpe_refresh_current_tab() {
+
+		var search = $.trim(
+			$('#tkpe-search').val()
+		);
+
+		var category = $('#tkpe-category').val();
+		var type = $('#tkpe-type').val();
+		var stockStatus = $('#tkpe-stock-status').val();
+		var status = $('#tkpe-status').val();
+
+
+		/*
+		 * Search takes priority.
+		 */
+		if (search) {
+
+			$('#tkpe-search-form').trigger('submit');
+
+			return;
+		}
+
+
+		/*
+		 * Otherwise use the current filters.
+		 */
+		if (
+			category ||
+			type ||
+			stockStatus ||
+			status
+		) {
+
+			$('#tkpe-filter-form').trigger('submit');
+
+			return;
+		}
+
+	}
+
+
+	/**
 	 * Switch between tabs.
+	 *
+	 * Each time a tab is opened, refresh the table
+	 * using the current search/filter configuration.
 	 */
 	$(document).on(
 		'click',
@@ -1067,10 +1167,18 @@ function tkpe_variation_price_preview(product) {
 
 			var tab = $(this).data('tab');
 
+
+			/*
+			 * Activate the clicked tab immediately.
+			 */
 			$('.tkpe-tab-button').removeClass('is-active');
 
 			$(this).addClass('is-active');
 
+
+			/*
+			 * Show the selected tab.
+			 */
 			if ('bulk' === tab) {
 
 				$('#tkpe-bulk-tab').prop('hidden', false);
@@ -1083,72 +1191,81 @@ function tkpe_variation_price_preview(product) {
 
 			}
 
+
+			/*
+			 * Refresh the currently opened tab.
+			 *
+			 * The active tab has already been changed,
+			 * so AJAX loading will preserve this tab.
+			 */
+			tkpe_refresh_current_tab();
+
 		}
 	);
 
+
 	/**
- * Toggle variation price card.
- *
- * Clicking the trigger opens/closes the card.
- */
-$(document).on(
-	'click',
-	'.tkpe-show-variation-prices',
-	function (event) {
+	 * Toggle variation price card.
+	 */
+	$(document).on(
+		'click',
+		'.tkpe-show-variation-prices',
+		function (event) {
 
-		event.preventDefault();
-		event.stopPropagation();
+			event.preventDefault();
+			event.stopPropagation();
 
-		var $preview = $(this).closest(
-			'.tkpe-variation-price-preview'
-		);
-
-		/*
-		 * Close any other open variation cards.
-		 */
-		$('.tkpe-variation-price-preview.is-open')
-			.not($preview)
-			.removeClass('is-open');
-
-
-		/*
-		 * Toggle this card.
-		 */
-		$preview.toggleClass('is-open');
-
-	}
-);
-
-
-/**
- * Close variation price card when clicking
- * outside the trigger/card.
- */
-$(document).on(
-	'click',
-	function (event) {
-
-		if (
-			$(event.target).closest(
+			var $preview = $(this).closest(
 				'.tkpe-variation-price-preview'
-			).length
-		) {
-			return;
+			);
+
+
+			/*
+			 * Close any other open variation cards.
+			 */
+			$('.tkpe-variation-price-preview.is-open')
+				.not($preview)
+				.removeClass('is-open');
+
+
+			/*
+			 * Toggle this card.
+			 */
+			$preview.toggleClass('is-open');
+
 		}
-
-		$('.tkpe-variation-price-preview.is-open')
-			.removeClass('is-open');
-
-	}
-);
+	);
 
 
 	/**
- * Refresh one product after Quick Edit update.
- *
- * @param {Object} event Event object.
- * @param {number} productId Product ID.
- */
+	 * Close variation price card when clicking
+	 * outside the trigger/card.
+	 */
+	$(document).on(
+		'click',
+		function (event) {
+
+			if (
+				$(event.target).closest(
+					'.tkpe-variation-price-preview'
+				).length
+			) {
+				return;
+			}
+
+			$('.tkpe-variation-price-preview.is-open')
+				.removeClass('is-open');
+
+		}
+	);
+
+
+	/**
+	 * Refresh one product after Quick Edit update.
+	 *
+	 * @param {Object} event Event object.
+	 * @param {number} productId Product ID.
+	 */
 	$(document).on(
 		'tkpe:refresh-product',
 		function (event, productId) {
@@ -1158,6 +1275,7 @@ $(document).on(
 			}
 
 			tkpe_load_selected_product(productId);
+
 		}
 	);
 

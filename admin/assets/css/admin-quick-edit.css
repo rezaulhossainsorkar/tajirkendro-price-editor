@@ -1,0 +1,204 @@
+/**
+ * TKPE Quick Edit
+ */
+
+
+/* =========================================================
+ * Editor
+ * ========================================================= */
+
+.tkpe-editor-row {
+	background: #f6f7f7;
+}
+
+.tkpe-editor-cell {
+	padding: 0 !important;
+	border-bottom: 1px solid #dcdcde;
+}
+
+.tkpe-editor {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 24px;
+	background: #f8f9fa;
+	border-top: 1px solid #dcdcde;
+	border-bottom: 1px solid #dcdcde;
+}
+
+
+/* =========================================================
+ * Editor heading
+ * ========================================================= */
+
+.tkpe-editor > h3 {
+	margin: 0 0 20px;
+	padding: 0 0 15px;
+	border-bottom: 1px solid #dcdcde;
+	color: #1d2327;
+	font-size: 18px;
+	line-height: 1.4;
+}
+
+
+/* =========================================================
+ * Editor description
+ * ========================================================= */
+
+.tkpe-editor-description {
+	margin: -8px 0 20px;
+	color: #646970;
+	font-size: 13px;
+}
+
+
+/* =========================================================
+ * Simple product editor
+ * ========================================================= */
+
+.tkpe-editor-price-section {
+	margin-bottom: 16px;
+	padding: 18px;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 6px;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.tkpe-editor-price-section h4 {
+	margin: 0 0 15px;
+	color: #1d2327;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+
+/* =========================================================
+ * Variable product editor
+ * ========================================================= */
+
+.tkpe-editor-variations {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 16px;
+}
+
+.tkpe-editor-variation {
+	padding: 18px;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 8px;
+	box-shadow:
+		0 1px 2px rgba(0, 0, 0, 0.04),
+		0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.tkpe-editor-variation h4 {
+	margin: 0 0 18px;
+	padding-bottom: 12px;
+	border-bottom: 1px solid #e2e4e7;
+	color: #1d2327;
+	font-size: 14px;
+	font-weight: 600;
+	line-height: 1.5;
+}
+
+
+/* =========================================================
+ * Price rule
+ * ========================================================= */
+
+.tkpe-price-rule {
+	display: grid;
+	grid-template-columns: 150px minmax(130px, 1fr) minmax(180px, 1.5fr);
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 12px;
+	padding: 13px 14px;
+	background: #f8f9fa;
+	border: 1px solid #e2e4e7;
+	border-radius: 6px;
+}
+
+.tkpe-price-rule:last-child {
+	margin-bottom: 0;
+}
+
+.tkpe-price-rule > label {
+	display: none;
+}
+
+.tkpe-current-price {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 28px;
+	padding: 3px 9px;
+	box-sizing: border-box;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	color: #646970;
+	font-size: 12px;
+	line-height: 1.4;
+	white-space: nowrap;
+}
+
+.tkpe-price-method {
+	width: 100%;
+	min-height: 36px;
+	margin: 0 !important;
+}
+
+.tkpe-price-value {
+	width: 80%;
+	min-height: 36px;
+	margin: 0 !important;
+	box-sizing: border-box;
+}
+
+
+/* =========================================================
+ * Editor actions
+ * ========================================================= */
+
+.tkpe-editor-actions {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-top: 20px;
+	padding-top: 16px;
+	border-top: 1px solid #dcdcde;
+}
+
+.tkpe-editor-actions .button {
+	min-height: 36px;
+	padding: 0 16px;
+}
+
+.tkpe-cancel-edit {
+	color: #50575e;
+}
+
+.tkpe-apply-edit {
+	min-width: 80px;
+}
+
+
+/* =========================================================
+ * Editor states
+ * ========================================================= */
+
+.tkpe-error {
+	padding: 12px 14px;
+	background: #fcf0f1;
+	border-left: 4px solid #d63638;
+	color: #8a2424;
+	border-radius: 2px;
+}
+
+.tkpe-editor-loading {
+	padding: 30px;
+	color: #646970;
+	text-align: center;
+}

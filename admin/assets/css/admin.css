@@ -1,0 +1,26 @@
+/**
+ * TKPE Admin Styles
+ *
+ * Main stylesheet.
+ * Component styles are loaded separately for easier maintenance.
+ */
+
+
+/* Core page layout. */
+@import url("admin-controls.css");
+@import url("admin-tabs.css");
+@import url("admin-table.css");
+@import url("admin-bulk-edit.css");
+@import url("admin-quick-edit.css");
+@import url("admin-responsive.css");
+
+
+/**
+ * TKPE Admin
+ *
+ * Shared admin-level styles.
+ */
+
+.tkpe-wrap {
+	max-width: 1500px;
+}

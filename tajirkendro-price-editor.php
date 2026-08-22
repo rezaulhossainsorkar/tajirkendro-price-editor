@@ -40,6 +40,7 @@ function tkpe_load_files() {
 	require_once TKPE_PLUGIN_PATH . 'includes/admin/admin-page.php';
 
 	require_once TKPE_PLUGIN_PATH . 'includes/api/products.php';
+	require_once TKPE_PLUGIN_PATH . 'includes/api/bulk-pricing.php';
 	require_once TKPE_PLUGIN_PATH . 'includes/api/quick-edit.php';
 	require_once TKPE_PLUGIN_PATH . 'includes/api/product-editor.php';
 	require_once TKPE_PLUGIN_PATH . 'includes/api/product-updater.php';

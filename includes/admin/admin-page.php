@@ -21,9 +21,57 @@ function tkpe_enqueue_admin_assets( $hook_suffix ) {
 	}
 
 	wp_enqueue_style(
-		'tkpe-admin-products',
-		TKPE_PLUGIN_URL . 'admin/assets/css/admin-products.css',
-		array(),
+	'tkpe-admin',
+	TKPE_PLUGIN_URL . 'admin/assets/css/admin.css',
+	array(),
+	TKPE_VERSION
+	);
+
+	wp_enqueue_style(
+		'tkpe-admin-controls',
+		TKPE_PLUGIN_URL . 'admin/assets/css/admin-controls.css',
+		array( 'tkpe-admin' ),
+		TKPE_VERSION
+	);
+
+	wp_enqueue_style(
+		'tkpe-admin-tabs',
+		TKPE_PLUGIN_URL . 'admin/assets/css/admin-tabs.css',
+		array( 'tkpe-admin' ),
+		TKPE_VERSION
+	);
+
+	wp_enqueue_style(
+		'tkpe-admin-table',
+		TKPE_PLUGIN_URL . 'admin/assets/css/admin-table.css',
+		array( 'tkpe-admin' ),
+		TKPE_VERSION
+	);
+
+	wp_enqueue_style(
+		'tkpe-admin-bulk-edit',
+		TKPE_PLUGIN_URL . 'admin/assets/css/admin-bulk-edit.css',
+		array( 'tkpe-admin' ),
+		TKPE_VERSION
+	);
+
+	wp_enqueue_style(
+		'tkpe-admin-quick-edit',
+		TKPE_PLUGIN_URL . 'admin/assets/css/admin-quick-edit.css',
+		array( 'tkpe-admin' ),
+		TKPE_VERSION
+	);
+
+	wp_enqueue_style(
+		'tkpe-admin-responsive',
+		TKPE_PLUGIN_URL . 'admin/assets/css/admin-responsive.css',
+		array(
+			'tkpe-admin-controls',
+			'tkpe-admin-tabs',
+			'tkpe-admin-table',
+			'tkpe-admin-bulk-edit',
+			'tkpe-admin-quick-edit',
+		),
 		TKPE_VERSION
 	);
 

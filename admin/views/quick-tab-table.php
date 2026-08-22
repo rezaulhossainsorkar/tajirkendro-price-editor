@@ -63,3 +63,57 @@ if ( ! defined( 'ABSPATH' ) ) {
 	</div>
 
 </div>
+
+<script>
+jQuery(document).ready(function ($) {
+
+	'use strict';
+
+	$(document).on(
+		'click',
+		'.tkpe-tab-button[data-tab="quick"]',
+		function () {
+
+			var search = $.trim(
+				$('#tkpe-search').val()
+			);
+
+			var category = $('#tkpe-category').val();
+			var type = $('#tkpe-type').val();
+			var stockStatus = $('#tkpe-stock-status').val();
+			var status = $('#tkpe-status').val();
+
+
+			/*
+			 * If a search value exists,
+			 * refresh using the current search.
+			 */
+			if (search) {
+
+				$('#tkpe-search-form').trigger('submit');
+
+				return;
+			}
+
+
+			/*
+			 * Otherwise refresh using the
+			 * current filter configuration.
+			 */
+			if (
+				category ||
+				type ||
+				stockStatus ||
+				status
+			) {
+
+				$('#tkpe-filter-form').trigger('submit');
+
+				return;
+			}
+
+		}
+	);
+
+});
+</script>

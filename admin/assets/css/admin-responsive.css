@@ -1,0 +1,177 @@
+/**
+ * TKPE Responsive Admin Styles
+ */
+
+
+/* =========================================================
+ * Tablet
+ * ========================================================= */
+
+@media screen and (max-width: 1100px) {
+
+	.tkpe-editor-variations {
+		grid-template-columns: 1fr;
+	}
+
+	.tkpe-price-rule {
+		grid-template-columns:
+			140px
+			minmax(130px, 1fr)
+			minmax(160px, 1fr);
+	}
+
+}
+
+
+/* =========================================================
+ * Small tablet
+ * ========================================================= */
+
+@media screen and (max-width: 900px) {
+
+	.tkpe-filter-grid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+
+	.tkpe-controls-actions {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.tkpe-filter-actions {
+		align-self: flex-start;
+	}
+
+	.tkpe-search-section {
+		width: 100%;
+	}
+
+	.tkpe-search-field {
+		flex: 1;
+		width: auto;
+	}
+
+	.tkpe-price-rule {
+		grid-template-columns: 1fr 1fr;
+	}
+
+	.tkpe-price-rule > label {
+		grid-column: 1 / -1;
+	}
+
+	.tkpe-bulk-price-rule {
+		grid-template-columns: 1fr 1fr;
+	}
+
+	.tkpe-bulk-price-field:last-child {
+		grid-column: 1 / -1;
+	}
+
+}
+
+
+/* =========================================================
+ * Mobile
+ * ========================================================= */
+
+@media screen and (max-width: 600px) {
+
+	.tkpe-controls {
+		padding: 15px;
+	}
+
+	.tkpe-filter-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.tkpe-filter-actions {
+		flex-wrap: wrap;
+	}
+
+	.tkpe-search-form {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.tkpe-search-field {
+		width: 100%;
+	}
+
+	.tkpe-search-form .button {
+		align-self: flex-start;
+	}
+
+
+	/* Quick Edit */
+
+	.tkpe-editor {
+		padding: 15px;
+	}
+
+	.tkpe-editor-variations {
+		grid-template-columns: 1fr;
+	}
+
+	.tkpe-editor-variation {
+		padding: 14px;
+	}
+
+	.tkpe-price-rule {
+		grid-template-columns: 1fr;
+		gap: 8px;
+		padding: 12px;
+	}
+
+	.tkpe-price-rule > label {
+		grid-column: auto;
+	}
+
+	.tkpe-current-price {
+		justify-content: flex-start;
+		width: fit-content;
+	}
+
+	.tkpe-editor-actions {
+		justify-content: stretch;
+	}
+
+	.tkpe-editor-actions .button {
+		flex: 1;
+	}
+
+
+	/* Bulk Edit */
+
+	.tkpe-bulk-rules {
+		padding: 15px;
+	}
+
+	.tkpe-bulk-price-rule {
+		grid-template-columns: 1fr;
+		gap: 10px;
+		padding: 13px;
+	}
+
+	.tkpe-bulk-price-field:last-child {
+		grid-column: auto;
+	}
+
+	.tkpe-bulk-actions {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.tkpe-bulk-apply {
+		width: 100%;
+	}
+
+
+	/* Variation price preview */
+
+	.tkpe-variation-price-card {
+		left: 50%;
+		width: min(360px, calc(100vw - 40px));
+		transform: translateX(-50%);
+	}
+
+}

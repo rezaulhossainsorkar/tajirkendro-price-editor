@@ -567,17 +567,29 @@ jQuery(document).ready(function ($) {
 					})
 				);
 
+				/*
+				 * "Regular" is a visual label only.
+				 *
+				 * The actual price type remains "regular".
+				 */
 				$variation.append(
 					tkpe_price_rule_fields(
 						'regular',
-						variation.regular_price
+						variation.regular_price,
+						'Regular'
 					)
 				);
 
+				/*
+				 * "Current" is a visual label only.
+				 *
+				 * The actual price type remains "sale".
+				 */
 				$variation.append(
 					tkpe_price_rule_fields(
 						'sale',
-						variation.sale_price
+						variation.sale_price,
+						'Current'
 					)
 				);
 
@@ -599,9 +611,14 @@ jQuery(document).ready(function ($) {
 	 *
 	 * @param {string} priceType Price type.
 	 * @param {string} currentPrice Current price.
+	 * @param {string} priceLabel Visual price label.
 	 * @return {jQuery} Fields.
 	 */
-	function tkpe_price_rule_fields(priceType, currentPrice) {
+	function tkpe_price_rule_fields(
+		priceType,
+		currentPrice,
+		priceLabel
+	) {
 
 		var $wrapper = $('<div>', {
 			class: 'tkpe-price-rule',
@@ -641,10 +658,27 @@ jQuery(document).ready(function ($) {
 			value: ''
 		});
 
+		/*
+		 * Use a default visual label when one is not
+		 * explicitly provided by the caller.
+		 *
+		 * This is visual only and does not affect
+		 * the actual price type.
+		 */
+		if (! priceLabel) {
+
+			priceLabel =
+				'regular' === priceType
+					? 'Regular'
+					: 'Current';
+
+		}
+
 		var $current = $('<span>', {
 			class: 'tkpe-current-price',
 			text:
-				'Current: ' +
+				priceLabel +
+				': ' +
 				(currentPrice || '—')
 		});
 
@@ -1019,312 +1053,313 @@ jQuery(document).ready(function ($) {
 	}
 
 
-/**
- * Build Quick Edit price cell.
- *
- * @param {Object} product Product.
- * @return {jQuery} Price cell.
- */
-function tkpe_build_price_cell(product) {
-
-	var $cell = $('<td>', {
-		class: 'tkpe-price-cell'
-	});
-
-
-	/*
-	 * Variable products do not have one
-	 * fixed parent price.
+	/**
+	 * Build Quick Edit price cell.
 	 *
-	 * Show the variation price preview instead.
+	 * @param {Object} product Product.
+	 * @return {jQuery} Price cell.
 	 */
-	if ('variable' === product.type) {
+	function tkpe_build_price_cell(product) {
 
-		$cell.append(
-			tkpe_variation_price_preview(product)
-		);
+		var $cell = $('<td>', {
+			class: 'tkpe-price-cell'
+		});
+
+
+		/*
+		 * Variable products do not have one
+		 * fixed parent price.
+		 *
+		 * Show the variation price preview instead.
+		 */
+		if ('variable' === product.type) {
+
+			$cell.append(
+				tkpe_variation_price_preview(product)
+			);
+
+			return $cell;
+		}
+
+
+		/*
+		 * Regular product price.
+		 */
+		if (product.regular_price) {
+
+			$cell.append(
+				$('<div>', {
+					class: 'tkpe-regular-price',
+					text:
+						'Regular: ' +
+						product.regular_price
+				})
+			);
+
+		}
+
+
+		/*
+		 * Sale product price.
+		 */
+		if (product.sale_price) {
+
+			$cell.append(
+				$('<div>', {
+					class: 'tkpe-sale-price',
+					text:
+						'Sale: ' +
+						product.sale_price
+				})
+			);
+
+		}
+
+
+		/*
+		 * Product has no price.
+		 */
+		if (
+			! product.regular_price &&
+			! product.sale_price
+		) {
+
+			$cell.text('—');
+
+		}
+
 
 		return $cell;
 	}
 
 
-	/*
-	 * Regular product price.
+	/**
+	 * Build variable-product variation price preview.
+	 *
+	 * @param {Object} product Product.
+	 * @return {jQuery} Variation price preview.
 	 */
-	if (product.regular_price) {
+	function tkpe_variation_price_preview(product) {
 
-		$cell.append(
-			$('<div>', {
-				class: 'tkpe-regular-price',
-				text:
-					'Regular: ' +
-					product.regular_price
-			})
-		);
-
-	}
+		var $wrapper = $('<div>', {
+			class: 'tkpe-variation-price-preview'
+		});
 
 
-	/*
-	 * Sale product price.
-	 */
-	if (product.sale_price) {
-
-		$cell.append(
-			$('<div>', {
-				class: 'tkpe-sale-price',
-				text:
-					'Sale: ' +
-					product.sale_price
-			})
-		);
-
-	}
+		var $trigger = $('<button>', {
+			type: 'button',
+			class: 'button-link tkpe-show-variation-prices',
+			text: 'Show variation prices'
+		});
 
 
-	/*
-	 * Product has no price.
-	 */
-	if (
-		! product.regular_price &&
-		! product.sale_price
-	) {
-
-		$cell.text('—');
-
-	}
+		var $card = $('<div>', {
+			class: 'tkpe-variation-price-card',
+			hidden: true
+		});
 
 
-	return $cell;
-}
-
-/**
- * Build variable-product variation price preview.
- *
- * @param {Object} product Product.
- * @return {jQuery} Variation price preview.
- */
-function tkpe_variation_price_preview(product) {
-
-	var $wrapper = $('<div>', {
-		class: 'tkpe-variation-price-preview'
-	});
+		var $title = $('<strong>', {
+			class: 'tkpe-variation-price-title',
+			text: 'Variation prices'
+		});
 
 
-	var $trigger = $('<button>', {
-		type: 'button',
-		class: 'button-link tkpe-show-variation-prices',
-		text: 'Show variation prices'
-	});
+		var $list = $('<div>', {
+			class: 'tkpe-variation-price-list'
+		});
 
 
-	var $card = $('<div>', {
-		class: 'tkpe-variation-price-card',
-		hidden: true
-	});
+		if (
+			! $.isArray(product.variations) ||
+			! product.variations.length
+		) {
 
+			$list.append(
+				$('<div>', {
+					class: 'tkpe-no-variation-prices',
+					text: 'No variation prices available.'
+				})
+			);
 
-	var $title = $('<strong>', {
-		class: 'tkpe-variation-price-title',
-		text: 'Variation prices'
-	});
+		} else {
 
+			$.each(
+				product.variations,
+				function (index, variation) {
 
-	var $list = $('<div>', {
-		class: 'tkpe-variation-price-list'
-	});
+					var $item = $('<div>', {
+						class: 'tkpe-variation-price-item'
+					});
 
+					var $attributes = $('<div>', {
+						class: 'tkpe-variation-attributes'
+					});
 
-	if (
-		! $.isArray(product.variations) ||
-		! product.variations.length
-	) {
+					var attributeText = [];
 
-		$list.append(
-			$('<div>', {
-				class: 'tkpe-no-variation-prices',
-				text: 'No variation prices available.'
-			})
-		);
+					$.each(
+						variation.attributes || [],
+						function (attributeIndex, attribute) {
 
-	} else {
+							attributeText.push(
+								attribute.name +
+								': ' +
+								attribute.value
+							);
 
-		$.each(
-			product.variations,
-			function (index, variation) {
+						}
+					);
 
-				var $item = $('<div>', {
-					class: 'tkpe-variation-price-item'
-				});
+					if (attributeText.length) {
 
-				var $attributes = $('<div>', {
-					class: 'tkpe-variation-attributes'
-				});
+						$attributes.text(
+							attributeText.join(' / ')
+						);
 
-				var attributeText = [];
+					} else {
 
-				$.each(
-					variation.attributes || [],
-					function (attributeIndex, attribute) {
-
-						attributeText.push(
-							attribute.name +
-							': ' +
-							attribute.value
+						$attributes.text(
+							'Variation #' + variation.id
 						);
 
 					}
-				);
-
-				if (attributeText.length) {
-
-					$attributes.text(
-						attributeText.join(' / ')
-					);
-
-				} else {
-
-					$attributes.text(
-						'Variation #' + variation.id
-					);
-
-				}
 
 
-				var $prices = $('<div>', {
-					class: 'tkpe-variation-prices'
-				});
+					var $prices = $('<div>', {
+						class: 'tkpe-variation-prices'
+					});
 
 
-				if (variation.regular_price) {
+					if (variation.regular_price) {
 
-					$prices.append(
-						$('<span>', {
-							class: 'tkpe-variation-regular-price',
-							text:
-								'Regular: ' +
-								variation.regular_price
-						})
-					);
+						$prices.append(
+							$('<span>', {
+								class: 'tkpe-variation-regular-price',
+								text:
+									'Regular: ' +
+									variation.regular_price
+							})
+						);
 
-				}
-
-
-				if (variation.sale_price) {
-
-					$prices.append(
-						$('<span>', {
-							class: 'tkpe-variation-sale-price',
-							text:
-								'Sale: ' +
-								variation.sale_price
-						})
-					);
-
-				}
+					}
 
 
-				if (
-					! variation.regular_price &&
-					! variation.sale_price
-				) {
+					if (variation.sale_price) {
 
-					$prices.append(
-						$('<span>', {
-							class: 'tkpe-variation-no-price',
-							text: 'No price'
-						})
-					);
+						$prices.append(
+							$('<span>', {
+								class: 'tkpe-variation-sale-price',
+								text:
+									'Sale: ' +
+									variation.sale_price
+							})
+						);
+
+					}
+
+
+					if (
+						! variation.regular_price &&
+						! variation.sale_price
+					) {
+
+						$prices.append(
+							$('<span>', {
+								class: 'tkpe-variation-no-price',
+								text: 'No price'
+							})
+						);
+
+					}
+
+
+					$item
+						.append($attributes)
+						.append($prices);
+
+					$list.append($item);
 
 				}
+			);
+
+		}
 
 
-				$item
-					.append($attributes)
-					.append($prices);
+		$card
+			.append($title)
+			.append($list);
 
-				$list.append($item);
+
+		$wrapper
+			.append($trigger)
+			.append($card);
+
+
+		/*
+		 * Show on hover.
+		 */
+		$wrapper.on(
+			'mouseenter',
+			function () {
+
+				$card.prop('hidden', false);
 
 			}
 		);
 
+
+		/*
+		 * Hide when mouse leaves.
+		 */
+		$wrapper.on(
+			'mouseleave',
+			function () {
+
+				$card.prop('hidden', true);
+
+			}
+		);
+
+
+		/*
+		 * Keyboard accessibility.
+		 */
+		$trigger.on(
+			'focus',
+			function () {
+
+				$card.prop('hidden', false);
+
+			}
+		);
+
+
+		$trigger.on(
+			'blur',
+			function () {
+
+				setTimeout(
+					function () {
+
+						if (
+							! $wrapper.find(':focus').length
+						) {
+
+							$card.prop('hidden', true);
+
+						}
+
+					},
+					100
+				);
+
+			}
+		);
+
+
+		return $wrapper;
 	}
-
-
-	$card
-		.append($title)
-		.append($list);
-
-
-	$wrapper
-		.append($trigger)
-		.append($card);
-
-
-	/*
-	 * Show on hover.
-	 */
-	$wrapper.on(
-		'mouseenter',
-		function () {
-
-			$card.prop('hidden', false);
-
-		}
-	);
-
-
-	/*
-	 * Hide when mouse leaves.
-	 */
-	$wrapper.on(
-		'mouseleave',
-		function () {
-
-			$card.prop('hidden', true);
-
-		}
-	);
-
-
-	/*
-	 * Keyboard accessibility.
-	 */
-	$trigger.on(
-		'focus',
-		function () {
-
-			$card.prop('hidden', false);
-
-		}
-	);
-
-
-	$trigger.on(
-		'blur',
-		function () {
-
-			setTimeout(
-				function () {
-
-					if (
-						! $wrapper.find(':focus').length
-					) {
-
-						$card.prop('hidden', true);
-
-					}
-
-				},
-				100
-			);
-
-		}
-	);
-
-
-	return $wrapper;
-}
 
 
 	/**

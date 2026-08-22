@@ -1,0 +1,38 @@
+/**
+ * TKPE Product Tabs
+ */
+
+
+/* =========================================================
+ * Product tabs
+ * ========================================================= */
+
+.tkpe-product-tab {
+	margin-top: 20px;
+	background: #fff;
+	border: 1px solid #dcdcde;
+}
+
+.tkpe-tab-navigation {
+	display: flex;
+	padding: 0 15px;
+	border-bottom: 1px solid #dcdcde;
+}
+
+.tkpe-tab-button {
+	padding: 14px 20px;
+	background: transparent;
+	border: 0;
+	border-bottom: 3px solid transparent;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.tkpe-tab-button.is-active {
+	color: #2271b1;
+	border-bottom-color: #2271b1;
+}
+
+.tkpe-tab-content {
+	padding: 20px;
+}
