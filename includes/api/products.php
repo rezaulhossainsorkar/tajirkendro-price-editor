@@ -275,6 +275,76 @@ function tkpe_get_search_suggestions( $search, $limit = 8 ) {
 
 
 /**
+ * Prepare variation price data.
+ *
+ * @param WC_Product_Variable $product Variable product.
+ * @return array
+ */
+function tkpe_prepare_variation_prices( $product ) {
+
+	$variations = array();
+
+	if ( ! $product->is_type( 'variable' ) ) {
+		return $variations;
+	}
+
+	foreach ( $product->get_children() as $variation_id ) {
+
+		$variation = wc_get_product( $variation_id );
+
+		if ( ! $variation ) {
+			continue;
+		}
+
+		$attributes = array();
+
+		foreach ( $variation->get_attributes() as $attribute_name => $attribute_value ) {
+
+			$taxonomy = str_replace(
+				'attribute_',
+				'',
+				$attribute_name
+			);
+
+			$label = wc_attribute_label( $taxonomy );
+
+			$value = $attribute_value;
+
+			if (
+				taxonomy_exists( $taxonomy ) &&
+				'' !== $attribute_value
+			) {
+
+				$term = get_term_by(
+					'slug',
+					$attribute_value,
+					$taxonomy
+				);
+
+				if ( $term && ! is_wp_error( $term ) ) {
+					$value = $term->name;
+				}
+			}
+
+			$attributes[] = array(
+				'name'  => $label,
+				'value' => $value,
+			);
+		}
+
+		$variations[] = array(
+			'id'            => $variation->get_id(),
+			'attributes'    => $attributes,
+			'regular_price' => $variation->get_regular_price(),
+			'sale_price'    => $variation->get_sale_price(),
+		);
+	}
+
+	return $variations;
+}
+
+
+/**
  * Prepare product data for JavaScript.
  *
  * @param WC_Product[] $products Products.
@@ -307,7 +377,7 @@ function tkpe_prepare_products( $products ) {
 
 		$stock_status = $product->get_stock_status();
 
-		$data[] = array(
+		$product_data = array(
 			'id'              => $product->get_id(),
 			'name'            => $product->get_name(),
 			'image'           => $image_url,
@@ -328,7 +398,23 @@ function tkpe_prepare_products( $products ) {
 			'regular_price'   => $product->get_regular_price(),
 			'sale_price'      => $product->get_sale_price(),
 			'price'           => $product->get_price(),
+			'variations'      => array(),
 		);
+
+		/*
+		 * Variable products do not have one
+		 * meaningful fixed price for the table.
+		 *
+		 * Send their variation prices instead.
+		 */
+		if ( $product->is_type( 'variable' ) ) {
+
+			$product_data['variations'] = tkpe_prepare_variation_prices(
+				$product
+			);
+		}
+
+		$data[] = $product_data;
 	}
 
 	return $data;

@@ -35,22 +35,6 @@ jQuery(document).ready(function ($) {
 
 
 	/**
-	 * View product.
-	 */
-	$(document).on(
-		'click',
-		'.tkpe-view-product',
-		function () {
-
-			var productId = $(this).data('product-id');
-
-			tkpe_view_product(productId);
-
-		}
-	);
-
-
-	/**
 	 * Edit product.
 	 */
 	$(document).on(
@@ -940,7 +924,7 @@ jQuery(document).ready(function ($) {
 
 					window.alert(
 						response.data.message ||
-						'Unable to update the product.'
+						'Sell price cannot be higher than Regular price'
 					);
 
 					return;
@@ -985,7 +969,7 @@ jQuery(document).ready(function ($) {
 				}
 
 				window.alert(
-					'Unable to update the product.'
+					'Sell price cannot be higher than Regular price'
 				);
 
 			},
@@ -1035,60 +1019,312 @@ jQuery(document).ready(function ($) {
 	}
 
 
-	/**
-	 * Build Quick Edit price cell.
+/**
+ * Build Quick Edit price cell.
+ *
+ * @param {Object} product Product.
+ * @return {jQuery} Price cell.
+ */
+function tkpe_build_price_cell(product) {
+
+	var $cell = $('<td>', {
+		class: 'tkpe-price-cell'
+	});
+
+
+	/*
+	 * Variable products do not have one
+	 * fixed parent price.
 	 *
-	 * This intentionally lives in Quick Edit JS
-	 * so this file does not depend on the private
-	 * functions inside admin-products.js.
-	 *
-	 * @param {Object} product Product.
-	 * @return {jQuery} Price cell.
+	 * Show the variation price preview instead.
 	 */
-	function tkpe_build_price_cell(product) {
+	if ('variable' === product.type) {
 
-		var $cell = $('<td>', {
-			class: 'tkpe-price-cell'
-		});
-
-		if (product.regular_price) {
-
-			$cell.append(
-				$('<div>', {
-					class: 'tkpe-regular-price',
-					text:
-						'Regular: ' +
-						product.regular_price
-				})
-			);
-
-		}
-
-		if (product.sale_price) {
-
-			$cell.append(
-				$('<div>', {
-					class: 'tkpe-sale-price',
-					text:
-						'Sale: ' +
-						product.sale_price
-				})
-			);
-
-		}
-
-		if (
-			! product.regular_price &&
-			! product.sale_price
-		) {
-
-			$cell.text('—');
-
-		}
+		$cell.append(
+			tkpe_variation_price_preview(product)
+		);
 
 		return $cell;
+	}
+
+
+	/*
+	 * Regular product price.
+	 */
+	if (product.regular_price) {
+
+		$cell.append(
+			$('<div>', {
+				class: 'tkpe-regular-price',
+				text:
+					'Regular: ' +
+					product.regular_price
+			})
+		);
 
 	}
+
+
+	/*
+	 * Sale product price.
+	 */
+	if (product.sale_price) {
+
+		$cell.append(
+			$('<div>', {
+				class: 'tkpe-sale-price',
+				text:
+					'Sale: ' +
+					product.sale_price
+			})
+		);
+
+	}
+
+
+	/*
+	 * Product has no price.
+	 */
+	if (
+		! product.regular_price &&
+		! product.sale_price
+	) {
+
+		$cell.text('—');
+
+	}
+
+
+	return $cell;
+}
+
+/**
+ * Build variable-product variation price preview.
+ *
+ * @param {Object} product Product.
+ * @return {jQuery} Variation price preview.
+ */
+function tkpe_variation_price_preview(product) {
+
+	var $wrapper = $('<div>', {
+		class: 'tkpe-variation-price-preview'
+	});
+
+
+	var $trigger = $('<button>', {
+		type: 'button',
+		class: 'button-link tkpe-show-variation-prices',
+		text: 'Show variation prices'
+	});
+
+
+	var $card = $('<div>', {
+		class: 'tkpe-variation-price-card',
+		hidden: true
+	});
+
+
+	var $title = $('<strong>', {
+		class: 'tkpe-variation-price-title',
+		text: 'Variation prices'
+	});
+
+
+	var $list = $('<div>', {
+		class: 'tkpe-variation-price-list'
+	});
+
+
+	if (
+		! $.isArray(product.variations) ||
+		! product.variations.length
+	) {
+
+		$list.append(
+			$('<div>', {
+				class: 'tkpe-no-variation-prices',
+				text: 'No variation prices available.'
+			})
+		);
+
+	} else {
+
+		$.each(
+			product.variations,
+			function (index, variation) {
+
+				var $item = $('<div>', {
+					class: 'tkpe-variation-price-item'
+				});
+
+				var $attributes = $('<div>', {
+					class: 'tkpe-variation-attributes'
+				});
+
+				var attributeText = [];
+
+				$.each(
+					variation.attributes || [],
+					function (attributeIndex, attribute) {
+
+						attributeText.push(
+							attribute.name +
+							': ' +
+							attribute.value
+						);
+
+					}
+				);
+
+				if (attributeText.length) {
+
+					$attributes.text(
+						attributeText.join(' / ')
+					);
+
+				} else {
+
+					$attributes.text(
+						'Variation #' + variation.id
+					);
+
+				}
+
+
+				var $prices = $('<div>', {
+					class: 'tkpe-variation-prices'
+				});
+
+
+				if (variation.regular_price) {
+
+					$prices.append(
+						$('<span>', {
+							class: 'tkpe-variation-regular-price',
+							text:
+								'Regular: ' +
+								variation.regular_price
+						})
+					);
+
+				}
+
+
+				if (variation.sale_price) {
+
+					$prices.append(
+						$('<span>', {
+							class: 'tkpe-variation-sale-price',
+							text:
+								'Sale: ' +
+								variation.sale_price
+						})
+					);
+
+				}
+
+
+				if (
+					! variation.regular_price &&
+					! variation.sale_price
+				) {
+
+					$prices.append(
+						$('<span>', {
+							class: 'tkpe-variation-no-price',
+							text: 'No price'
+						})
+					);
+
+				}
+
+
+				$item
+					.append($attributes)
+					.append($prices);
+
+				$list.append($item);
+
+			}
+		);
+
+	}
+
+
+	$card
+		.append($title)
+		.append($list);
+
+
+	$wrapper
+		.append($trigger)
+		.append($card);
+
+
+	/*
+	 * Show on hover.
+	 */
+	$wrapper.on(
+		'mouseenter',
+		function () {
+
+			$card.prop('hidden', false);
+
+		}
+	);
+
+
+	/*
+	 * Hide when mouse leaves.
+	 */
+	$wrapper.on(
+		'mouseleave',
+		function () {
+
+			$card.prop('hidden', true);
+
+		}
+	);
+
+
+	/*
+	 * Keyboard accessibility.
+	 */
+	$trigger.on(
+		'focus',
+		function () {
+
+			$card.prop('hidden', false);
+
+		}
+	);
+
+
+	$trigger.on(
+		'blur',
+		function () {
+
+			setTimeout(
+				function () {
+
+					if (
+						! $wrapper.find(':focus').length
+					) {
+
+						$card.prop('hidden', true);
+
+					}
+
+				},
+				100
+			);
+
+		}
+	);
+
+
+	return $wrapper;
+}
 
 
 	/**

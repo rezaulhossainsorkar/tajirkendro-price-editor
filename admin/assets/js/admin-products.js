@@ -640,14 +640,6 @@ jQuery(document).ready(function ($) {
 			$actions.append(
 				$('<button>', {
 					type: 'button',
-					class: 'button tkpe-view-product',
-					text: 'View'
-				}).data('product-id', product.id)
-			);
-
-			$actions.append(
-				$('<button>', {
-					type: 'button',
 					class: 'button tkpe-edit-product',
 					text: 'Edit'
 				}).data('product-id', product.id)
@@ -726,51 +718,320 @@ jQuery(document).ready(function ($) {
 	}
 
 
-	/**
-	 * Price cell.
-	 *
-	 * @param {Object} product Product.
-	 * @return {jQuery} Price cell.
+/**
+ * Price cell.
+ *
+ * @param {Object} product Product.
+ * @return {jQuery} Price cell.
+ */
+function tkpe_price_cell(product) {
+
+	var $cell = $('<td>', {
+		class: 'tkpe-price-cell'
+	});
+
+
+	/*
+	 * Variable products use variation prices
+	 * instead of a single parent price.
 	 */
-	function tkpe_price_cell(product) {
+	if ('variable' === product.type) {
 
-		var $cell = $('<td>', {
-			class: 'tkpe-price-cell'
-		});
-
-		if (product.regular_price) {
-
-			$cell.append(
-				$('<div>', {
-					class: 'tkpe-regular-price',
-					text: 'Regular: ' + product.regular_price
-				})
-			);
-
-		}
-
-		if (product.sale_price) {
-
-			$cell.append(
-				$('<div>', {
-					class: 'tkpe-sale-price',
-					text: 'Sale: ' + product.sale_price
-				})
-			);
-
-		}
-
-		if (
-			!product.regular_price &&
-			!product.sale_price
-		) {
-
-			$cell.text('—');
-
-		}
+		$cell.append(
+			tkpe_variation_price_preview(product)
+		);
 
 		return $cell;
 	}
+
+
+	/*
+	 * Regular product price.
+	 */
+	if (product.regular_price) {
+
+		$cell.append(
+			$('<div>', {
+				class: 'tkpe-regular-price',
+				text: 'Regular: ' + product.regular_price
+			})
+		);
+
+	}
+
+
+	/*
+	 * Sale product price.
+	 */
+	if (product.sale_price) {
+
+		$cell.append(
+			$('<div>', {
+				class: 'tkpe-sale-price',
+				text: 'Sale: ' + product.sale_price
+			})
+		);
+
+	}
+
+
+	/*
+	 * Product has no price.
+	 */
+	if (
+		! product.regular_price &&
+		! product.sale_price
+	) {
+
+		$cell.text('—');
+
+	}
+
+
+	return $cell;
+}
+
+
+/**
+ * Build variable-product variation price preview.
+ *
+ * @param {Object} product Product.
+ * @return {jQuery} Variation price preview.
+ */
+function tkpe_variation_price_preview(product) {
+
+	var $wrapper = $('<div>', {
+		class: 'tkpe-variation-price-preview'
+	});
+
+
+	var $trigger = $('<button>', {
+		type: 'button',
+		class: 'button-link tkpe-show-variation-prices',
+		text: 'Show variation prices'
+	});
+
+
+	var $card = $('<div>', {
+		class: 'tkpe-variation-price-card',
+		hidden: true
+	});
+
+
+	var $title = $('<strong>', {
+		class: 'tkpe-variation-price-title',
+		text: 'Variation prices'
+	});
+
+
+	var $list = $('<div>', {
+		class: 'tkpe-variation-price-list'
+	});
+
+
+	/*
+	 * No variations.
+	 */
+	if (
+		! $.isArray(product.variations) ||
+		! product.variations.length
+	) {
+
+		$list.append(
+			$('<div>', {
+				class: 'tkpe-no-variation-prices',
+				text: 'No variation prices available.'
+			})
+		);
+
+	} else {
+
+		$.each(
+			product.variations,
+			function (index, variation) {
+
+				var $item = $('<div>', {
+					class: 'tkpe-variation-price-item'
+				});
+
+
+				var $attributes = $('<div>', {
+					class: 'tkpe-variation-attributes'
+				});
+
+
+				var attributeText = [];
+
+
+				$.each(
+					variation.attributes || [],
+					function (attributeIndex, attribute) {
+
+						attributeText.push(
+							attribute.name +
+							': ' +
+							attribute.value
+						);
+
+					}
+				);
+
+
+				if (attributeText.length) {
+
+					$attributes.text(
+						attributeText.join(' / ')
+					);
+
+				} else {
+
+					$attributes.text(
+						'Variation #' + variation.id
+					);
+
+				}
+
+
+				var $prices = $('<div>', {
+					class: 'tkpe-variation-prices'
+				});
+
+
+				if (variation.regular_price) {
+
+					$prices.append(
+						$('<span>', {
+							class: 'tkpe-variation-regular-price',
+							text:
+								'Regular: ' +
+								variation.regular_price
+						})
+					);
+
+				}
+
+
+				if (variation.sale_price) {
+
+					$prices.append(
+						$('<span>', {
+							class: 'tkpe-variation-sale-price',
+							text:
+								'Sale: ' +
+								variation.sale_price
+						})
+					);
+
+				}
+
+
+				if (
+					! variation.regular_price &&
+					! variation.sale_price
+				) {
+
+					$prices.append(
+						$('<span>', {
+							class: 'tkpe-variation-no-price',
+							text: 'No price'
+						})
+					);
+
+				}
+
+
+				$item
+					.append($attributes)
+					.append($prices);
+
+
+				$list.append($item);
+
+			}
+		);
+
+	}
+
+
+	$card
+		.append($title)
+		.append($list);
+
+
+	$wrapper
+		.append($trigger)
+		.append($card);
+
+
+	/*
+	 * Show card.
+	 */
+	$wrapper.on(
+		'mouseenter',
+		function () {
+
+			$card.prop('hidden', false);
+
+		}
+	);
+
+
+	/*
+	 * Hide card.
+	 */
+	$wrapper.on(
+		'mouseleave',
+		function () {
+
+			$card.prop('hidden', true);
+
+		}
+	);
+
+
+	/*
+	 * Keyboard accessibility.
+	 */
+	$trigger.on(
+		'focus',
+		function () {
+
+			$card.prop('hidden', false);
+
+		}
+	);
+
+
+	$trigger.on(
+		'blur',
+		function () {
+
+			/*
+			 * Delay slightly so moving focus
+			 * into the card does not immediately
+			 * hide it.
+			 */
+			setTimeout(
+				function () {
+
+					if (
+						! $wrapper.find(':focus').length
+					) {
+
+						$card.prop('hidden', true);
+
+					}
+
+				},
+				100
+			);
+
+		}
+	);
+
+
+	return $wrapper;
+}
 
 
 	/**
@@ -824,6 +1085,62 @@ jQuery(document).ready(function ($) {
 
 		}
 	);
+
+	/**
+ * Toggle variation price card.
+ *
+ * Clicking the trigger opens/closes the card.
+ */
+$(document).on(
+	'click',
+	'.tkpe-show-variation-prices',
+	function (event) {
+
+		event.preventDefault();
+		event.stopPropagation();
+
+		var $preview = $(this).closest(
+			'.tkpe-variation-price-preview'
+		);
+
+		/*
+		 * Close any other open variation cards.
+		 */
+		$('.tkpe-variation-price-preview.is-open')
+			.not($preview)
+			.removeClass('is-open');
+
+
+		/*
+		 * Toggle this card.
+		 */
+		$preview.toggleClass('is-open');
+
+	}
+);
+
+
+/**
+ * Close variation price card when clicking
+ * outside the trigger/card.
+ */
+$(document).on(
+	'click',
+	function (event) {
+
+		if (
+			$(event.target).closest(
+				'.tkpe-variation-price-preview'
+			).length
+		) {
+			return;
+		}
+
+		$('.tkpe-variation-price-preview.is-open')
+			.removeClass('is-open');
+
+	}
+);
 
 
 	/**

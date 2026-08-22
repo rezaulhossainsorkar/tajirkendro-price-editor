@@ -2,6 +2,10 @@
 	max-width: 1500px;
 }
 
+/* =========================================================
+ * Controls
+ * ========================================================= */
+
 .tkpe-controls {
 	margin-top: 25px;
 	padding: 20px;
@@ -9,12 +13,6 @@
 	border: 1px solid #dcdcde;
 }
 
-/*
- * Filter section.
- *
- * This is logically independent from the search section,
- * but does not have its own visual container.
- */
 .tkpe-filter-section {
 	margin: 0;
 }
@@ -28,20 +26,14 @@
 .tkpe-filter-field label,
 .tkpe-search-field label {
 	display: block;
-	font-weight: 600;
 	margin-bottom: 6px;
+	font-weight: 600;
 }
 
 .tkpe-filter-field select {
 	width: 100%;
 }
 
-/*
- * Shared action row.
- *
- * Filter actions and search are independent,
- * but visually displayed on the same row.
- */
 .tkpe-controls-actions {
 	display: flex;
 	align-items: flex-end;
@@ -50,23 +42,17 @@
 	margin-top: 15px;
 }
 
-/*
- * Filter actions.
- */
 .tkpe-filter-actions {
 	display: flex;
 	align-items: flex-end;
-	gap: 8px;
-	margin-top: 0;
 	flex-shrink: 0;
+	gap: 8px;
 }
 
-/*
- * Search section.
- *
- * No background, border, or padding because it
- * belongs visually to the main controls container.
- */
+/* =========================================================
+ * Search
+ * ========================================================= */
+
 .tkpe-search-section {
 	margin: 0;
 	padding: 0;
@@ -74,9 +60,6 @@
 	border: 0;
 }
 
-/*
- * Search form.
- */
 .tkpe-search-form {
 	display: flex;
 	align-items: flex-end;
@@ -97,14 +80,11 @@
 	min-height: 40px;
 }
 
-/*
- * Search suggestions.
- */
 .tkpe-search-suggestions {
 	position: absolute;
+	top: calc(100% + 2px);
 	left: 0;
 	right: 0;
-	top: calc(100% + 2px);
 	z-index: 100;
 	background: #fff;
 	border: 1px solid #c3c4c7;
@@ -117,9 +97,9 @@
 	gap: 10px;
 	width: 100%;
 	padding: 8px 10px;
+	background: #fff;
 	border: 0;
 	border-bottom: 1px solid #eee;
-	background: #fff;
 	text-align: left;
 	cursor: pointer;
 }
@@ -149,28 +129,29 @@
 	color: #646970;
 }
 
-/*
- * Product tabs.
- */
+/* =========================================================
+ * Product tabs
+ * ========================================================= */
+
 .tkpe-product-tab {
+	margin-top: 20px;
 	background: #fff;
 	border: 1px solid #dcdcde;
-	margin-top: 20px;
 }
 
 .tkpe-tab-navigation {
 	display: flex;
-	border-bottom: 1px solid #dcdcde;
 	padding: 0 15px;
+	border-bottom: 1px solid #dcdcde;
 }
 
 .tkpe-tab-button {
 	padding: 14px 20px;
+	background: transparent;
 	border: 0;
 	border-bottom: 3px solid transparent;
-	background: transparent;
-	cursor: pointer;
 	font-weight: 600;
+	cursor: pointer;
 }
 
 .tkpe-tab-button.is-active {
@@ -182,12 +163,13 @@
 	padding: 20px;
 }
 
-/*
- * Bulk pricing rules.
- */
+/* =========================================================
+ * Bulk pricing
+ * ========================================================= */
+
 .tkpe-bulk-rules {
-	padding: 15px;
 	margin-bottom: 20px;
+	padding: 15px;
 	background: #f6f7f7;
 	border: 1px solid #dcdcde;
 }
@@ -196,9 +178,10 @@
 	margin-top: 0;
 }
 
-/*
- * Product table.
- */
+/* =========================================================
+ * Product table
+ * ========================================================= */
+
 .tkpe-table-wrapper {
 	overflow-x: auto;
 }
@@ -240,22 +223,336 @@
 
 .tkpe-actions {
 	display: flex;
-	gap: 5px;
 	flex-wrap: wrap;
+	gap: 5px;
 }
 
-/*
- * Loading state.
- */
 .tkpe-loading {
 	padding: 30px !important;
-	text-align: center;
 	color: #646970;
+	text-align: center;
 }
 
-/*
- * Tablet.
- */
+/* =========================================================
+ * Variation price preview
+ * ========================================================= */
+
+.tkpe-variation-price-preview {
+	position: relative;
+	display: inline-block;
+}
+
+.tkpe-show-variation-prices {
+	display: inline-block;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.tkpe-show-variation-prices:hover {
+	text-decoration: underline;
+}
+
+.tkpe-variation-price-card {
+	position: absolute;
+	bottom: calc(100% + 8px);
+	left: 0;
+	z-index: 999999;
+	display: none;
+	box-sizing: border-box;
+	width: 360px;
+	max-height: 360px;
+	padding: 14px;
+	overflow-y: auto;
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-radius: 6px;
+	box-shadow:
+		0 8px 24px rgba(0, 0, 0, 0.15),
+		0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.tkpe-variation-price-preview.is-open .tkpe-variation-price-card {
+	display: block;
+}
+
+.tkpe-variation-price-title {
+	display: block;
+	margin-bottom: 4px;
+	padding-bottom: 10px;
+	border-bottom: 1px solid #dcdcde;
+	font-size: 14px;
+	font-weight: 600;
+	line-height: 1.4;
+}
+
+.tkpe-variation-price-list {
+	display: flex;
+	flex-direction: column;
+}
+
+.tkpe-variation-price-item {
+	padding: 10px 0;
+	border-bottom: 1px solid #f0f0f1;
+}
+
+.tkpe-variation-price-item:last-child {
+	border-bottom: 0;
+}
+
+.tkpe-variation-attributes {
+	margin-bottom: 5px;
+	font-weight: 600;
+	line-height: 1.4;
+}
+
+.tkpe-variation-prices {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	font-size: 13px;
+	line-height: 1.4;
+}
+
+.tkpe-variation-regular-price {
+	color: #50575e;
+}
+
+.tkpe-variation-sale-price {
+	color: #008a20;
+	font-weight: 600;
+}
+
+.tkpe-variation-no-price,
+.tkpe-no-variation-prices {
+	color: #787c82;
+	font-style: italic;
+}
+
+.tkpe-no-variation-prices {
+	padding: 8px 0;
+}
+
+/* =========================================================
+ * Quick editor
+ * ========================================================= */
+
+.tkpe-editor-row {
+	background: #f6f7f7;
+}
+
+.tkpe-editor-cell {
+	padding: 0 !important;
+	border-bottom: 1px solid #dcdcde;
+}
+
+.tkpe-editor {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 24px;
+	background: #f8f9fa;
+	border-top: 1px solid #dcdcde;
+	border-bottom: 1px solid #dcdcde;
+}
+
+/* Editor heading */
+
+.tkpe-editor > h3 {
+	margin: 0 0 20px;
+	padding: 0 0 15px;
+	border-bottom: 1px solid #dcdcde;
+	color: #1d2327;
+	font-size: 18px;
+	line-height: 1.4;
+}
+
+/* Editor description */
+
+.tkpe-editor-description {
+	margin: -8px 0 20px;
+	color: #646970;
+	font-size: 13px;
+}
+
+.tkpe-price-rule > label {
+	display: none;
+}
+
+/* =========================================================
+ * Simple product editor
+ * ========================================================= */
+
+.tkpe-editor-price-section {
+	margin-bottom: 16px;
+	padding: 18px;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 6px;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.tkpe-editor-price-section h4 {
+	margin: 0 0 15px;
+	color: #1d2327;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+/* =========================================================
+ * Variable product editor
+ * ========================================================= */
+
+.tkpe-editor-variations {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 16px;
+}
+
+.tkpe-editor-variation {
+	padding: 18px;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 8px;
+	box-shadow:
+		0 1px 2px rgba(0, 0, 0, 0.04),
+		0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.tkpe-editor-variation h4 {
+	margin: 0 0 18px;
+	padding-bottom: 12px;
+	border-bottom: 1px solid #e2e4e7;
+	color: #1d2327;
+	font-size: 14px;
+	font-weight: 600;
+	line-height: 1.5;
+}
+
+/* =========================================================
+ * Price rule
+ * ========================================================= */
+
+.tkpe-price-rule {
+	display: grid;
+	grid-template-columns: 150px minmax(130px, 1fr) minmax(180px, 1.5fr);
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 12px;
+	padding: 13px 14px;
+	background: #f8f9fa;
+	border: 1px solid #e2e4e7;
+	border-radius: 6px;
+}
+
+.tkpe-price-rule:last-child {
+	margin-bottom: 0;
+}
+
+/* Price type label */
+
+.tkpe-price-rule > label {
+	margin: 0;
+	color: #1d2327;
+	font-size: 13px;
+	font-weight: 600;
+	line-height: 1.4;
+}
+
+/* Current price */
+
+.tkpe-current-price {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 28px;
+	padding: 3px 9px;
+	box-sizing: border-box;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	color: #646970;
+	font-size: 12px;
+	line-height: 1.4;
+	white-space: nowrap;
+}
+
+/* Pricing method */
+
+.tkpe-price-method {
+	width: 100%;
+	min-height: 36px;
+	margin: 0 !important;
+}
+
+/* Pricing value */
+
+.tkpe-price-value {
+	width: 80%;
+	min-height: 36px;
+	margin: 0 !important;
+	box-sizing: border-box;
+}
+
+/* =========================================================
+ * Editor actions
+ * ========================================================= */
+
+.tkpe-editor-actions {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-top: 20px;
+	padding-top: 16px;
+	border-top: 1px solid #dcdcde;
+}
+
+.tkpe-editor-actions .button {
+	min-height: 36px;
+	padding: 0 16px;
+}
+
+.tkpe-cancel-edit {
+	color: #50575e;
+}
+
+.tkpe-apply-edit {
+	min-width: 80px;
+}
+
+/* =========================================================
+ * Errors
+ * ========================================================= */
+
+.tkpe-error {
+	padding: 12px 14px;
+	background: #fcf0f1;
+	border-left: 4px solid #d63638;
+	color: #8a2424;
+	border-radius: 2px;
+}
+
+.tkpe-editor-loading {
+	padding: 30px;
+	color: #646970;
+	text-align: center;
+}
+
+/* =========================================================
+ * Tablet
+ * ========================================================= */
+
+@media screen and (max-width: 1100px) {
+
+	.tkpe-editor-variations {
+		grid-template-columns: 1fr;
+	}
+
+	.tkpe-price-rule {
+		grid-template-columns: 140px minmax(130px, 1fr) minmax(160px, 1fr);
+	}
+
+}
+
 @media screen and (max-width: 900px) {
 
 	.tkpe-filter-grid {
@@ -280,11 +577,20 @@
 		width: auto;
 	}
 
+	.tkpe-price-rule {
+		grid-template-columns: 1fr 1fr;
+	}
+
+	.tkpe-price-rule > label {
+		grid-column: 1 / -1;
+	}
+
 }
 
-/*
- * Mobile.
- */
+/* =========================================================
+ * Mobile
+ * ========================================================= */
+
 @media screen and (max-width: 600px) {
 
 	.tkpe-controls {
@@ -310,6 +616,47 @@
 
 	.tkpe-search-form .button {
 		align-self: flex-start;
+	}
+
+	.tkpe-editor {
+		padding: 15px;
+	}
+
+	.tkpe-editor-variations {
+		grid-template-columns: 1fr;
+	}
+
+	.tkpe-editor-variation {
+		padding: 14px;
+	}
+
+	.tkpe-price-rule {
+		grid-template-columns: 1fr;
+		gap: 8px;
+		padding: 12px;
+	}
+
+	.tkpe-price-rule > label {
+		grid-column: auto;
+	}
+
+	.tkpe-current-price {
+		justify-content: flex-start;
+		width: fit-content;
+	}
+
+	.tkpe-editor-actions {
+		justify-content: stretch;
+	}
+
+	.tkpe-editor-actions .button {
+		flex: 1;
+	}
+
+	.tkpe-variation-price-card {
+		left: 50%;
+		width: min(360px, calc(100vw - 40px));
+		transform: translateX(-50%);
 	}
 
 }
