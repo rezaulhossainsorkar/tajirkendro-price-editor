@@ -1,8 +1,6 @@
 <?php
 /**
  * TKPE admin menu.
- *
- * @package TajirKendro_Price_Editor
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -12,6 +10,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * Register TKPE admin menu.
+ *
+ * @return void
  */
 function tkpe_register_admin_menu() {
 

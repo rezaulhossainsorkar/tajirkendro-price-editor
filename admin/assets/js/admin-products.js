@@ -1,810 +1,847 @@
-(function () {
+jQuery(document).ready(function ($) {
+
 	'use strict';
 
-	if (typeof tkpeAdmin === 'undefined') {
-		return;
-	}
+	var suggestionTimer = null;
+	var suggestionRequest = null;
+	var searchRequest = null;
+	var filterRequest = null;
 
-	const state = {
-		products: [],
-		currentPage: 1,
-		productsPerPage: 10,
-		totalProducts: 0,
-		totalPages: 0,
-		search: '',
-		category: '',
-		type: '',
-		stockStatus: '',
-		status: '',
-		requestController: null,
-		searchTimer: null,
-	};
-
-	const elements = {
-		search: document.getElementById('tkpe-search'),
-		category: document.getElementById('tkpe-category'),
-		type: document.getElementById('tkpe-type'),
-		stockStatus: document.getElementById('tkpe-stock-status'),
-		status: document.getElementById('tkpe-status'),
-		productsPerPage: document.getElementById('tkpe-per-page'),
-		selectAll: document.getElementById('tkpe-select-all'),
-		productRows: document.getElementById('tkpe-product-rows'),
-		pagination: document.getElementById('tkpe-pagination'),
-		loading: document.getElementById('tkpe-loading'),
-		emptyState: document.getElementById('tkpe-empty-state'),
-		resultsSummary: document.getElementById('tkpe-results-summary'),
-	};
 
 	/**
-	 * Initialize the product editor.
+	 * Dynamic search suggestions.
 	 */
-	function init() {
-		bindEvents();
-		loadProducts();
-	}
+	$('#tkpe-search').on('input', function () {
 
-	/**
-	 * Bind UI events.
-	 */
-	function bindEvents() {
-		elements.search.addEventListener('input', handleSearchInput);
+		var search = $.trim($(this).val());
 
-		elements.category.addEventListener('change', handleFilterChange);
-		elements.type.addEventListener('change', handleFilterChange);
-		elements.stockStatus.addEventListener('change', handleFilterChange);
-		elements.status.addEventListener('change', handleFilterChange);
-		elements.productsPerPage.addEventListener('change', handlePerPageChange);
+		clearTimeout(suggestionTimer);
 
-		elements.selectAll.addEventListener('change', handleSelectAllChange);
-
-		elements.pagination.addEventListener('click', handlePaginationClick);
-	}
-
-	/**
-	 * Handle search input with debounce.
-	 */
-	function handleSearchInput() {
-		window.clearTimeout(state.searchTimer);
-
-		state.searchTimer = window.setTimeout(function () {
-			state.search = elements.search.value.trim();
-			state.currentPage = 1;
-
-			loadProducts();
-		}, 350);
-	}
-
-	/**
-	 * Handle regular filter changes.
-	 */
-	function handleFilterChange() {
-		state.search = elements.search.value.trim();
-		state.category = elements.category.value;
-		state.type = elements.type.value;
-		state.stockStatus = elements.stockStatus.value;
-		state.status = elements.status.value;
-		state.currentPage = 1;
-
-		loadProducts();
-	}
-
-	/**
-	 * Handle products-per-page change.
-	 */
-	function handlePerPageChange() {
-		const selectedValue = parseInt(elements.productsPerPage.value, 10);
-
-		if ([10, 20, 30, 50].indexOf(selectedValue) === -1) {
-			state.productsPerPage = 10;
-		} else {
-			state.productsPerPage = selectedValue;
+		if (suggestionRequest) {
+			suggestionRequest.abort();
+			suggestionRequest = null;
 		}
 
-		state.currentPage = 1;
+		if (search.length < 2) {
 
-		loadProducts();
-	}
+			$('#tkpe-search-suggestions')
+				.empty()
+				.prop('hidden', true);
+
+			return;
+		}
+
+		suggestionTimer = setTimeout(function () {
+
+			tkpe_load_suggestions(search);
+
+		}, 250);
+
+	});
+
 
 	/**
-	 * Build the REST request URL.
+	 * Load search suggestions.
 	 *
-	 * @returns {string} REST request URL.
+	 * @param {string} search Search term.
 	 */
-	function buildRequestUrl() {
-		const url = new URL(tkpeAdmin.restUrl);
+	function tkpe_load_suggestions(search) {
 
-		url.searchParams.set('page', String(state.currentPage));
-		url.searchParams.set('per_page', String(state.productsPerPage));
+		suggestionRequest = $.ajax({
 
-		if (state.search !== '') {
-			url.searchParams.set('search', state.search);
-		}
+			url: tkpeAdmin.ajaxUrl,
 
-		if (state.category !== '') {
-			url.searchParams.set('category', state.category);
-		}
+			type: 'POST',
 
-		if (state.type !== '') {
-			url.searchParams.set('type', state.type);
-		}
+			data: {
+				action: 'tkpe_search_suggestions',
+				nonce: tkpeAdmin.nonce,
+				search: search
+			},
 
-		if (state.stockStatus !== '') {
-			url.searchParams.set('stock_status', state.stockStatus);
-		}
+			success: function (response) {
 
-		if (state.status !== '') {
-			url.searchParams.set('status', state.status);
-		}
+				if (!response.success) {
+					return;
+				}
 
-		return url.toString();
+				/*
+				 * Make sure the response still belongs
+				 * to the current search input.
+				 */
+				if (
+					search !== $.trim(
+						$('#tkpe-search').val()
+					)
+				) {
+					return;
+				}
+
+				tkpe_render_suggestions(
+					response.data.suggestions
+				);
+
+			},
+
+			complete: function () {
+				suggestionRequest = null;
+			}
+
+		});
 	}
 
+
 	/**
-	 * Retrieve products from the REST API.
+	 * Render suggestions.
+	 *
+	 * @param {Array} suggestions Suggestions.
 	 */
-	async function loadProducts() {
-		if (state.requestController) {
-			state.requestController.abort();
+	function tkpe_render_suggestions(suggestions) {
+
+		var $container = $('#tkpe-search-suggestions');
+
+		$container.empty();
+
+		if (!suggestions.length) {
+
+			$container
+				.append(
+					$('<div>', {
+						class: 'tkpe-no-suggestions',
+						text: 'No products found.'
+					})
+				)
+				.prop('hidden', false);
+
+			return;
 		}
 
-		state.requestController = new AbortController();
+		$.each(suggestions, function (index, product) {
 
-		setLoading(true);
-		hideEmptyState();
-
-		try {
-			const response = await fetch(buildRequestUrl(), {
-				method: 'GET',
-				credentials: 'same-origin',
-				headers: {
-					'X-WP-Nonce': tkpeAdmin.nonce,
-					'Accept': 'application/json',
-				},
-				signal: state.requestController.signal,
+			var $item = $('<button>', {
+				type: 'button',
+				class: 'tkpe-search-suggestion'
 			});
 
-			if (!response.ok) {
-				throw new Error('REST request failed.');
+			var $image = $('<img>', {
+				src: product.image,
+				alt: product.name
+			});
+
+			var $details = $('<span>', {
+				class: 'tkpe-suggestion-details'
+			});
+
+			$details.append(
+				$('<strong>', {
+					text: product.name
+				})
+			);
+
+			if (product.sku) {
+
+				$details.append(
+					$('<small>', {
+						text: 'SKU: ' + product.sku
+					})
+				);
+
 			}
 
-			const data = await response.json();
+			$item
+				.append($image)
+				.append($details)
+				.data('product-id', product.id)
+				.data('product-name', product.name);
 
-			if (
-				!data ||
-				!Array.isArray(data.products) ||
-				typeof data.total === 'undefined' ||
-				typeof data.pages === 'undefined'
-			) {
-				throw new Error('Invalid REST response.');
-			}
+			$container.append($item);
 
-			replaceStateFromResponse(data);
-			render();
+		});
 
-		} catch (error) {
-			if (error.name === 'AbortError') {
-				return;
-			}
-
-			state.products = [];
-			state.totalProducts = 0;
-			state.totalPages = 0;
-
-			renderError();
-		} finally {
-			setLoading(false);
-		}
+		$container.prop('hidden', false);
 	}
 
+
 	/**
-	 * Replace the current page state.
+	 * Load selected product.
 	 *
-	 * @param {Object} data REST response.
+	 * @param {number} productId Product ID.
 	 */
-	function replaceStateFromResponse(data) {
-		state.products = Array.isArray(data.products) ? data.products : [];
-		state.currentPage = Number(data.page) || 1;
-		state.productsPerPage = Number(data.per_page) || 20;
-		state.totalProducts = Number(data.total) || 0;
-		state.totalPages = Number(data.pages) || 0;
-	}
+	$(document).on(
+		'click',
+		'.tkpe-search-suggestion',
+		function () {
 
-	/**
-	 * Render the current application state.
-	 */
-	function render() {
-		renderRows();
-		renderSummary();
-		renderPagination();
+			var productId = $(this).data('product-id');
+			var productName = $(this).data('product-name');
 
-		elements.selectAll.checked = false;
-		elements.selectAll.indeterminate = false;
+			$('#tkpe-search').val(productName);
 
-		if (state.products.length === 0) {
-			showEmptyState();
-		} else {
-			hideEmptyState();
+			$('#tkpe-search-suggestions')
+				.empty()
+				.prop('hidden', true);
+
+			tkpe_load_selected_product(productId);
 		}
-	}
+	);
+
 
 	/**
-	 * Render product rows.
+	 * Submit search.
+	 *
+	 * Search does not read filter values.
 	 */
-	function renderRows() {
-		elements.productRows.replaceChildren();
+	$('#tkpe-search-form').on('submit', function (event) {
 
-		if (state.products.length === 0) {
-			const row = document.createElement('tr');
-			const cell = document.createElement('td');
+		event.preventDefault();
 
-			cell.colSpan = 7;
-			cell.className = 'tkpe-table-message';
-			cell.textContent = tkpeAdmin.i18n.noProducts;
+		var search = $.trim(
+			$('#tkpe-search').val()
+		);
 
-			row.appendChild(cell);
-			elements.productRows.appendChild(row);
-
+		if (!search) {
 			return;
 		}
 
-		state.products.forEach(function (product) {
-			elements.productRows.appendChild(createProductRow(product));
+		$('#tkpe-search-suggestions')
+			.empty()
+			.prop('hidden', true);
+
+		tkpe_search_products(search);
+
+	});
+
+
+	/**
+	 * Search products.
+	 *
+	 * @param {string} search Search term.
+	 */
+	function tkpe_search_products(search) {
+
+		if (searchRequest) {
+			searchRequest.abort();
+			searchRequest = null;
+		}
+
+		tkpe_show_loading();
+
+		searchRequest = $.ajax({
+
+			url: tkpeAdmin.ajaxUrl,
+
+			type: 'POST',
+
+			data: {
+				action: 'tkpe_search_products',
+				nonce: tkpeAdmin.nonce,
+				search: search
+			},
+
+			success: function (response) {
+
+				if (!response.success) {
+					return;
+				}
+
+				tkpe_render_products(
+					response.data.products
+				);
+
+			},
+
+			complete: function () {
+				searchRequest = null;
+			}
+
 		});
 	}
 
+
 	/**
-	 * Create a product table row.
+	 * Load the exact product selected from search suggestions.
 	 *
-	 * @param {Object} product Product data.
-	 * @returns {HTMLTableRowElement} Product row.
+	 * @param {number} productId Product ID.
 	 */
-	function createProductRow(product) {
-		const row = document.createElement('tr');
+	function tkpe_load_selected_product(productId) {
 
-		/**
-		 * Checkbox.
-		 */
-		const checkboxCell = document.createElement('th');
-		checkboxCell.scope = 'row';
-		checkboxCell.className = 'check-column';
-
-		const checkbox = document.createElement('input');
-		checkbox.type = 'checkbox';
-		checkbox.className = 'tkpe-product-checkbox';
-		checkbox.value = String(product.id);
-		checkbox.setAttribute('aria-label', product.name);
-
-		checkbox.addEventListener('change', updateSelectAllState);
-
-		checkboxCell.appendChild(checkbox);
-		row.appendChild(checkboxCell);
-
-		/**
-		 * Product.
-		 */
-		const productCell = document.createElement('td');
-		productCell.className = 'tkpe-product-cell';
-
-		const productWrapper = document.createElement('div');
-		productWrapper.className = 'tkpe-product-info';
-
-		if (product.image) {
-			const image = document.createElement('img');
-
-			image.src = product.image;
-			image.alt = '';
-			image.className = 'tkpe-product-image';
-			image.loading = 'lazy';
-			image.width = 48;
-			image.height = 48;
-
-			productWrapper.appendChild(image);
-		} else {
-			const imagePlaceholder = document.createElement('span');
-
-			imagePlaceholder.className = 'tkpe-product-image tkpe-product-image-placeholder';
-			imagePlaceholder.setAttribute('aria-hidden', 'true');
-
-			productWrapper.appendChild(imagePlaceholder);
+		if (searchRequest) {
+			searchRequest.abort();
+			searchRequest = null;
 		}
 
-		const productName = document.createElement('span');
-		productName.className = 'tkpe-product-name';
-		productName.textContent = product.name || '';
+		tkpe_show_loading();
 
-		productWrapper.appendChild(productName);
-		productCell.appendChild(productWrapper);
-		row.appendChild(productCell);
+		searchRequest = $.ajax({
 
-		/**
-		 * Categories.
-		 */
-		const categoryCell = document.createElement('td');
-		categoryCell.textContent = getCategoryText(product.categories);
+			url: tkpeAdmin.ajaxUrl,
 
-		row.appendChild(categoryCell);
+			type: 'POST',
 
-		/**
-		 * Product type.
-		 */
-		const typeCell = document.createElement('td');
-		typeCell.appendChild(createTypeBadge(product.type));
+			data: {
+				action: 'tkpe_get_selected_product',
+				nonce: tkpeAdmin.nonce,
+				product_id: productId
+			},
 
-		row.appendChild(typeCell);
+			success: function (response) {
 
-		/**
-		 * Status.
-		 */
-		const statusCell = document.createElement('td');
-		statusCell.appendChild(createStatusBadge(product.status));
+				if (!response.success) {
+					return;
+				}
 
-		row.appendChild(statusCell);
+				tkpe_render_products(
+					response.data.products
+				);
 
-		/**
-		 * Stock.
-		 */
-		const stockCell = document.createElement('td');
-		stockCell.appendChild(createStockBadge(product.stock_status));
+			},
 
-		row.appendChild(stockCell);
+			complete: function () {
+				searchRequest = null;
+			}
 
-		/**
-		 * Price.
-		 */
-		const priceCell = document.createElement('td');
-		priceCell.appendChild(createPriceContent(product));
-
-		row.appendChild(priceCell);
-
-		return row;
+		});
 	}
+
 
 	/**
-	 * Create a status badge.
+	 * Apply filters.
 	 *
-	 * @param {string} status Product status.
-	 * @returns {HTMLSpanElement} Status badge.
+	 * The selected filter values are captured first.
+	 * The current result state is then reset before
+	 * the new filter request is sent.
+	 *
+	 * Search remains completely independent.
 	 */
-	function createStatusBadge(status) {
-		const badge = document.createElement('span');
+	$('#tkpe-filter-form').on('submit', function (event) {
 
-		badge.className = 'tkpe-status-badge';
-		badge.textContent = formatStatus(status);
+		event.preventDefault();
 
-		return badge;
-	}
+		tkpe_apply_filters();
+
+	});
+
 
 	/**
-	 * Create a stock status badge.
-	 *
-	 * @param {string} status Stock status.
-	 * @returns {HTMLSpanElement} Stock badge.
+	 * Apply the currently selected filters.
 	 */
-	function createStockBadge(status) {
-		const badge = document.createElement('span');
+	function tkpe_apply_filters() {
 
-		badge.className = 'tkpe-stock-badge tkpe-stock-' + sanitizeClassName(status);
-		badge.textContent = formatStockStatus(status);
-
-		return badge;
-	}
-
-		/**
-	 * Create a product type badge.
-	 *
-	 * @param {string} type Product type.
-	 * @returns {HTMLSpanElement} Type badge.
-	 */
-	function createTypeBadge(type) {
-		const badge = document.createElement('span');
-
-		badge.className = 'tkpe-type-badge';
-		badge.textContent = formatProductType(type);
-
-		return badge;
-	}
-
-	/**
-	 * Format a product type.
-	 *
-	 * @param {string} type Product type.
-	 * @returns {string} Human-readable product type.
-	 */
-	function formatProductType(type) {
-		const labels = {
-			simple: 'Simple',
-			variable: 'Variable',
-			grouped: 'Grouped',
-			external: 'External',
+		var filters = {
+			category: $('#tkpe-category').val(),
+			type: $('#tkpe-type').val(),
+			stock_status: $('#tkpe-stock-status').val(),
+			status: $('#tkpe-status').val()
 		};
 
-		return labels[type] || type || '—';
+
+		/*
+		 * Reset the current result state first.
+		 *
+		 * The filter form itself is deliberately
+		 * not reset because these are the values
+		 * we are about to apply.
+		 */
+		tkpe_reset_results();
+
+
+		/*
+		 * Apply the captured filter values.
+		 */
+		tkpe_filter_products(filters);
+
 	}
 
+
 	/**
-	 * Create the price content.
+	 * Reset current product results.
 	 *
-	 * @param {Object} product Product data.
-	 * @returns {HTMLDivElement} Price content.
+	 * This resets the current result state only.
+	 * Filter values are preserved.
 	 */
-	function createPriceContent(product) {
-		const wrapper = document.createElement('div');
-		wrapper.className = 'tkpe-price-info';
+	function tkpe_reset_results() {
 
-		const regular = document.createElement('div');
-		const regularLabel = document.createElement('span');
+		clearTimeout(suggestionTimer);
 
-		regularLabel.className = 'tkpe-price-label';
-		regularLabel.textContent = tkpeAdmin.i18n.regular + ': ';
 
-		regular.appendChild(regularLabel);
-		regular.appendChild(
-			document.createTextNode(
-				product.regular_price !== '' ? product.regular_price : '—'
-			)
-		);
-
-		wrapper.appendChild(regular);
-
-		const sale = document.createElement('div');
-		const saleLabel = document.createElement('span');
-
-		saleLabel.className = 'tkpe-price-label';
-		saleLabel.textContent = tkpeAdmin.i18n.sale + ': ';
-
-		sale.appendChild(saleLabel);
-
-		if (product.sale_price !== '') {
-			sale.appendChild(document.createTextNode(product.sale_price));
-		} else {
-			const noSale = document.createElement('span');
-
-			noSale.className = 'tkpe-no-sale';
-			noSale.textContent = tkpeAdmin.i18n.noSalePrice;
-
-			sale.appendChild(noSale);
+		/*
+		 * Abort pending requests.
+		 */
+		if (suggestionRequest) {
+			suggestionRequest.abort();
+			suggestionRequest = null;
 		}
 
-		wrapper.appendChild(sale);
-
-		return wrapper;
-	}
-
-	/**
-	 * Get category display text.
-	 *
-	 * @param {Array} categories Product categories.
-	 * @returns {string} Category text.
-	 */
-	function getCategoryText(categories) {
-		if (!Array.isArray(categories) || categories.length === 0) {
-			return tkpeAdmin.i18n.uncategorized;
+		if (searchRequest) {
+			searchRequest.abort();
+			searchRequest = null;
 		}
 
-		return categories.join(', ');
-	}
-
-	/**
-	 * Format a product status.
-	 *
-	 * @param {string} status Product status.
-	 * @returns {string} Human-readable status.
-	 */
-	function formatStatus(status) {
-		const labels = {
-			publish: 'Published',
-			draft: 'Draft',
-			pending: 'Pending',
-			private: 'Private',
-		};
-
-		return labels[status] || status || '—';
-	}
-
-	/**
-	 * Format a stock status.
-	 *
-	 * @param {string} status Stock status.
-	 * @returns {string} Human-readable stock status.
-	 */
-	function formatStockStatus(status) {
-		const labels = {
-			instock: 'In stock',
-			outofstock: 'Out of stock',
-			onbackorder: 'On backorder',
-		};
-
-		return labels[status] || status || '—';
-	}
-
-	/**
-	 * Keep class names predictable.
-	 *
-	 * @param {string} value Class value.
-	 * @returns {string} Safe class value.
-	 */
-	function sanitizeClassName(value) {
-		return String(value || '')
-			.toLowerCase()
-			.replace(/[^a-z0-9_-]/g, '');
-	}
-
-	/**
-	 * Render results summary.
-	 */
-	function renderSummary() {
-		if (state.totalProducts === 0) {
-			elements.resultsSummary.textContent = '';
-			return;
+		if (filterRequest) {
+			filterRequest.abort();
+			filterRequest = null;
 		}
 
-		const firstProduct =
-			(state.currentPage - 1) * state.productsPerPage + 1;
 
-		const lastProduct = Math.min(
-			state.currentPage * state.productsPerPage,
-			state.totalProducts
-		);
+		/*
+		 * Clear search suggestions.
+		 */
+		$('#tkpe-search-suggestions')
+			.empty()
+			.prop('hidden', true);
 
-		elements.resultsSummary.textContent =
-			firstProduct +
-			'–' +
-			lastProduct +
-			' of ' +
-			state.totalProducts +
-			' ' +
-			tkpeAdmin.i18n.products;
+
+		/*
+		 * Clear product tables.
+		 */
+		$('#tkpe-bulk-products').empty();
+		$('#tkpe-quick-products').empty();
+
+
+		/*
+		 * Hide both tabs.
+		 */
+		$('#tkpe-bulk-tab').prop('hidden', true);
+		$('#tkpe-quick-tab').prop('hidden', true);
+
+
+		/*
+		 * Always make Bulk Edit the default tab.
+		 */
+		$('.tkpe-tab-button').removeClass('is-active');
+
+		$('.tkpe-tab-button[data-tab="bulk"]')
+			.addClass('is-active');
+
 	}
 
+
 	/**
-	 * Render server-side pagination.
+	 * Filter products.
+	 *
+	 * @param {Object} filters Filter values.
 	 */
-	function renderPagination() {
-		elements.pagination.replaceChildren();
+	function tkpe_filter_products(filters) {
 
-		if (state.totalPages <= 1) {
-			return;
+		if (filterRequest) {
+			filterRequest.abort();
+			filterRequest = null;
 		}
 
-		const fragment = document.createDocumentFragment();
+		tkpe_show_loading();
 
-		if (state.currentPage > 1) {
-			fragment.appendChild(
-				createPaginationButton(
-					state.currentPage - 1,
-					tkpeAdmin.i18n.previous
-				)
-			);
-		}
+		filterRequest = $.ajax({
 
-		const pages = getPaginationPages(
-			state.currentPage,
-			state.totalPages
-		);
+			url: tkpeAdmin.ajaxUrl,
 
-		pages.forEach(function (page) {
-			if (page === 'ellipsis') {
-				const ellipsis = document.createElement('span');
+			type: 'POST',
 
-				ellipsis.className = 'tkpe-pagination-ellipsis';
-				ellipsis.textContent = '…';
+			data: {
+				action: 'tkpe_filter_products',
+				nonce: tkpeAdmin.nonce,
 
-				fragment.appendChild(ellipsis);
+				category: filters.category,
+				type: filters.type,
+				stock_status: filters.stock_status,
+				status: filters.status
+			},
 
+			success: function (response) {
+
+				if (!response.success) {
+					return;
+				}
+
+				tkpe_render_products(
+					response.data.products
+				);
+
+			},
+
+			complete: function () {
+				filterRequest = null;
+			}
+
+		});
+	}
+
+
+	/**
+	 * Reset filters and results.
+	 */
+	$('#tkpe-reset-filters').on('click', function (event) {
+
+		event.preventDefault();
+
+		/*
+		 * Reset the actual filter form.
+		 */
+		$('#tkpe-filter-form')[0].reset();
+
+
+		/*
+		 * Clear the search field as well because
+		 * Reset means returning the whole UI to
+		 * its initial state.
+		 */
+		$('#tkpe-search').val('');
+
+
+		/*
+		 * Reset displayed results.
+		 */
+		tkpe_reset_results();
+
+	});
+
+
+	/**
+	 * Render product tables.
+	 *
+	 * Bulk Edit is always the default tab.
+	 *
+	 * @param {Array} products Products.
+	 */
+	function tkpe_render_products(products) {
+
+		tkpe_render_bulk_products(products);
+		tkpe_render_quick_products(products);
+
+
+		/*
+		 * Always activate Bulk Edit when a new
+		 * result set has been rendered.
+		 */
+		$('.tkpe-tab-button').removeClass('is-active');
+
+		$('.tkpe-tab-button[data-tab="bulk"]')
+			.addClass('is-active');
+
+
+		/*
+		 * Show Bulk Edit by default.
+		 */
+		$('#tkpe-bulk-tab').prop('hidden', false);
+		$('#tkpe-quick-tab').prop('hidden', true);
+
+	}
+
+
+	/**
+	 * Render bulk table.
+	 *
+	 * Variable products are excluded.
+	 *
+	 * @param {Array} products Products.
+	 */
+	function tkpe_render_bulk_products(products) {
+
+		var $body = $('#tkpe-bulk-products');
+
+		$body.empty();
+
+		$.each(products, function (index, product) {
+
+			if ('variable' === product.type) {
 				return;
 			}
 
-			const button = createPaginationButton(
-				page,
-				String(page)
+			var $row = $('<tr>');
+
+			var $checkbox = $('<input>', {
+				type: 'checkbox',
+				class: 'tkpe-product-checkbox',
+				value: product.id
+			});
+
+			$row.append(
+				$('<td>').append($checkbox)
 			);
 
-			if (page === state.currentPage) {
-				button.classList.add('is-current');
-				button.setAttribute('aria-current', 'page');
-			}
+			$row.append(
+				tkpe_product_cell(product)
+			);
 
-			fragment.appendChild(button);
+			$row.append(
+				$('<td>', {
+					text: product.type_label
+				})
+			);
+
+			$row.append(
+				$('<td>', {
+					text: product.status_label
+				})
+			);
+
+			$row.append(
+				tkpe_stock_cell(product)
+			);
+
+			$row.append(
+				tkpe_price_cell(product)
+			);
+
+			$body.append($row);
+
 		});
 
-		if (state.currentPage < state.totalPages) {
-			fragment.appendChild(
-				createPaginationButton(
-					state.currentPage + 1,
-					tkpeAdmin.i18n.next
-				)
+	}
+
+
+	/**
+	 * Render quick table.
+	 *
+	 * @param {Array} products Products.
+	 */
+	function tkpe_render_quick_products(products) {
+
+		var $body = $('#tkpe-quick-products');
+
+		$body.empty();
+
+		$.each(products, function (index, product) {
+
+			var $row = $('<tr>');
+
+			$row.attr(
+				'data-product-id',
+				product.id
 			);
-		}
 
-		elements.pagination.appendChild(fragment);
+			$row.append(
+				tkpe_product_cell(product)
+			);
+
+			$row.append(
+				$('<td>', {
+					text: product.type_label
+				})
+			);
+
+			$row.append(
+				$('<td>', {
+					text: product.status_label
+				})
+			);
+
+			$row.append(
+				tkpe_stock_cell(product)
+			);
+
+			$row.append(
+				tkpe_price_cell(product)
+			);
+
+			var $actions = $('<td>', {
+				class: 'tkpe-actions'
+			});
+
+			$actions.append(
+				$('<button>', {
+					type: 'button',
+					class: 'button tkpe-view-product',
+					text: 'View'
+				}).data('product-id', product.id)
+			);
+
+			$actions.append(
+				$('<button>', {
+					type: 'button',
+					class: 'button tkpe-edit-product',
+					text: 'Edit'
+				}).data('product-id', product.id)
+			);
+
+			$actions.append(
+				$('<button>', {
+					type: 'button',
+					class: 'button tkpe-delete-product',
+					text: 'Delete'
+				}).data('product-id', product.id)
+			);
+
+			$row.append($actions);
+
+			$body.append($row);
+
+		});
+
 	}
 
+
 	/**
-	 * Create a pagination button.
+	 * Product cell.
 	 *
-	 * @param {number} page Page number.
-	 * @param {string} label Button label.
-	 * @returns {HTMLButtonElement} Pagination button.
+	 * @param {Object} product Product.
+	 * @return {jQuery} Product cell.
 	 */
-	function createPaginationButton(page, label) {
-		const button = document.createElement('button');
+	function tkpe_product_cell(product) {
 
-		button.type = 'button';
-		button.className = 'button tkpe-page-button';
-		button.dataset.page = String(page);
-		button.textContent = label;
+		var $cell = $('<td>', {
+			class: 'tkpe-product-cell'
+		});
 
-		return button;
+		var $image = $('<img>', {
+			src: product.image,
+			alt: product.name,
+			class: 'tkpe-product-image'
+		});
+
+		var $name = $('<span>', {
+			class: 'tkpe-product-name',
+			text: product.name
+		});
+
+		$cell
+			.append($image)
+			.append($name);
+
+		return $cell;
 	}
 
-	/**
-	 * Create a compact pagination page list.
-	 *
-	 * @param {number} current Current page.
-	 * @param {number} total Total pages.
-	 * @returns {Array} Pagination pages.
-	 */
-	function getPaginationPages(current, total) {
-		if (total <= 7) {
-			return createNumberRange(1, total);
-		}
-
-		const pages = [1];
-
-		if (current > 4) {
-			pages.push('ellipsis');
-		}
-
-		const start = Math.max(2, current - 1);
-		const end = Math.min(total - 1, current + 1);
-
-		for (let page = start; page <= end; page++) {
-			pages.push(page);
-		}
-
-		if (current < total - 3) {
-			pages.push('ellipsis');
-		}
-
-		pages.push(total);
-
-		return pages;
-	}
 
 	/**
-	 * Create a number range.
+	 * Stock cell.
 	 *
-	 * @param {number} start Start number.
-	 * @param {number} end End number.
-	 * @returns {Array<number>} Number range.
+	 * @param {Object} product Product.
+	 * @return {jQuery} Stock cell.
 	 */
-	function createNumberRange(start, end) {
-		const numbers = [];
+	function tkpe_stock_cell(product) {
 
-		for (let number = start; number <= end; number++) {
-			numbers.push(number);
-		}
-
-		return numbers;
-	}
-
-	/**
-	 * Handle pagination click.
-	 *
-	 * @param {MouseEvent} event Click event.
-	 */
-	function handlePaginationClick(event) {
-		const button = event.target.closest('.tkpe-page-button');
-
-		if (!button) {
-			return;
-		}
-
-		const page = parseInt(button.dataset.page, 10);
+		var stock_text = product.stock_label;
 
 		if (
-			Number.isNaN(page) ||
-			page < 1 ||
-			page > state.totalPages ||
-			page === state.currentPage
+			product.manage_stock &&
+			null !== product.stock_quantity
 		) {
-			return;
+
+			stock_text += ' (' + product.stock_quantity + ')';
+
 		}
 
-		state.currentPage = page;
-
-		loadProducts();
-	}
-
-	/**
-	 * Handle select-all.
-	 */
-	function handleSelectAllChange() {
-		const checkboxes = elements.productRows.querySelectorAll(
-			'.tkpe-product-checkbox'
-		);
-
-		checkboxes.forEach(function (checkbox) {
-			checkbox.checked = elements.selectAll.checked;
+		return $('<td>', {
+			text: stock_text
 		});
 	}
 
+
 	/**
-	 * Update select-all state.
+	 * Price cell.
+	 *
+	 * @param {Object} product Product.
+	 * @return {jQuery} Price cell.
 	 */
-	function updateSelectAllState() {
-		const checkboxes = Array.from(
-			elements.productRows.querySelectorAll(
-				'.tkpe-product-checkbox'
-			)
+	function tkpe_price_cell(product) {
+
+		var $cell = $('<td>', {
+			class: 'tkpe-price-cell'
+		});
+
+		if (product.regular_price) {
+
+			$cell.append(
+				$('<div>', {
+					class: 'tkpe-regular-price',
+					text: 'Regular: ' + product.regular_price
+				})
+			);
+
+		}
+
+		if (product.sale_price) {
+
+			$cell.append(
+				$('<div>', {
+					class: 'tkpe-sale-price',
+					text: 'Sale: ' + product.sale_price
+				})
+			);
+
+		}
+
+		if (
+			!product.regular_price &&
+			!product.sale_price
+		) {
+
+			$cell.text('—');
+
+		}
+
+		return $cell;
+	}
+
+
+	/**
+	 * Show table loading state.
+	 */
+	function tkpe_show_loading() {
+
+		/*
+		 * Bulk Edit is always the loading/default tab.
+		 */
+		$('.tkpe-tab-button').removeClass('is-active');
+
+		$('.tkpe-tab-button[data-tab="bulk"]')
+			.addClass('is-active');
+
+		$('#tkpe-bulk-tab').prop('hidden', false);
+		$('#tkpe-quick-tab').prop('hidden', true);
+
+		$('#tkpe-bulk-products').html(
+			'<tr><td colspan="6" class="tkpe-loading">Loading products...</td></tr>'
 		);
 
-		if (checkboxes.length === 0) {
-			elements.selectAll.checked = false;
-			elements.selectAll.indeterminate = false;
-			return;
+	}
+
+
+	/**
+	 * Switch between tabs.
+	 */
+	$(document).on(
+		'click',
+		'.tkpe-tab-button',
+		function () {
+
+			var tab = $(this).data('tab');
+
+			$('.tkpe-tab-button').removeClass('is-active');
+
+			$(this).addClass('is-active');
+
+			if ('bulk' === tab) {
+
+				$('#tkpe-bulk-tab').prop('hidden', false);
+				$('#tkpe-quick-tab').prop('hidden', true);
+
+			} else if ('quick' === tab) {
+
+				$('#tkpe-bulk-tab').prop('hidden', true);
+				$('#tkpe-quick-tab').prop('hidden', false);
+
+			}
+
 		}
+	);
 
-		const checkedCount = checkboxes.filter(function (checkbox) {
-			return checkbox.checked;
-		}).length;
-
-		elements.selectAll.checked = checkedCount === checkboxes.length;
-		elements.selectAll.indeterminate =
-			checkedCount > 0 && checkedCount < checkboxes.length;
-	}
 
 	/**
-	 * Show loading state.
-	 *
-	 * @param {boolean} isLoading Loading state.
-	 */
-	function setLoading(isLoading) {
-		elements.loading.hidden = !isLoading;
+ * Refresh one product after Quick Edit update.
+ *
+ * @param {Object} event Event object.
+ * @param {number} productId Product ID.
+ */
+	$(document).on(
+		'tkpe:refresh-product',
+		function (event, productId) {
 
-		if (isLoading) {
-			elements.productRows.classList.add('is-loading');
-		} else {
-			elements.productRows.classList.remove('is-loading');
+			if (!productId) {
+				return;
+			}
+
+			tkpe_load_selected_product(productId);
 		}
-	}
+	);
 
-	/**
-	 * Show the empty state.
-	 */
-	function showEmptyState() {
-		elements.emptyState.hidden = false;
-	}
-
-	/**
-	 * Hide the empty state.
-	 */
-	function hideEmptyState() {
-		elements.emptyState.hidden = true;
-	}
-
-	/**
-	 * Render an error state.
-	 */
-	function renderError() {
-		elements.productRows.replaceChildren();
-
-		const row = document.createElement('tr');
-		const cell = document.createElement('td');
-
-		cell.colSpan = 7;
-		cell.className = 'tkpe-table-message tkpe-error-message';
-		cell.textContent = tkpeAdmin.i18n.error;
-
-		row.appendChild(cell);
-		elements.productRows.appendChild(row);
-
-		elements.resultsSummary.textContent = '';
-		elements.pagination.replaceChildren();
-		elements.selectAll.checked = false;
-		elements.selectAll.indeterminate = false;
-		hideEmptyState();
-	}
-
-	init();
-})();
+});

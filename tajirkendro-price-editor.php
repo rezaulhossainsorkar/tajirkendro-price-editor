@@ -31,12 +31,19 @@ define( 'TKPE_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
 /**
  * Load plugin files.
+ *
+ * @return void
  */
 function tkpe_load_files() {
 
 	require_once TKPE_PLUGIN_PATH . 'includes/admin/admin-menu.php';
 	require_once TKPE_PLUGIN_PATH . 'includes/admin/admin-page.php';
+
 	require_once TKPE_PLUGIN_PATH . 'includes/api/products.php';
+	require_once TKPE_PLUGIN_PATH . 'includes/api/quick-edit.php';
+	require_once TKPE_PLUGIN_PATH . 'includes/api/product-editor.php';
+	require_once TKPE_PLUGIN_PATH . 'includes/api/product-updater.php';
+	require_once TKPE_PLUGIN_PATH . 'includes/api/product-deleter.php';
 
 }
 
@@ -45,10 +52,14 @@ tkpe_load_files();
 
 /**
  * Initialize TKPE.
+ *
+ * @return void
  */
 function tkpe_init() {
 
-	// TKPE initialization will go here.
+	if ( ! class_exists( 'WooCommerce' ) ) {
+		return;
+	}
 
 }
 

@@ -1,8 +1,6 @@
 <?php
 /**
- * KTPE product REST API.
- *
- * @package TajirKendro_Price_Editor
+ * TKPE product API.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -11,376 +9,510 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 
 /**
- * Register the KTPE product REST route.
+ * Verify TKPE AJAX request.
  *
  * @return void
  */
-function tkpe_register_product_rest_route() {
+function tkpe_verify_ajax_request() {
 
-	register_rest_route(
-		'tkpe/v1',
-		'/products',
-		array(
-			'methods'             => WP_REST_Server::READABLE,
-			'callback'            => 'tkpe_get_products_rest',
-			'permission_callback' => 'tkpe_product_rest_permission',
-			'args'                => array(
-				'search' => array(
-					'type'              => 'string',
-					'required'          => false,
-					'default'           => '',
-					'sanitize_callback' => 'sanitize_text_field',
-				),
-				'category' => array(
-					'type'              => 'string',
-					'required'          => false,
-					'default'           => '',
-					'sanitize_callback' => 'sanitize_title',
-				),
-				'type' => array(
-					'type'              => 'string',
-					'required'          => false,
-					'default'           => '',
-					'sanitize_callback' => 'sanitize_key',
-					'validate_callback' => 'tkpe_validate_product_type',
-				),
-				'stock_status' => array(
-					'type'              => 'string',
-					'required'          => false,
-					'default'           => '',
-					'sanitize_callback' => 'sanitize_key',
-					'validate_callback' => 'tkpe_validate_stock_status',
-				),
-				'status' => array(
-					'type'              => 'string',
-					'required'          => false,
-					'default'           => '',
-					'sanitize_callback' => 'sanitize_key',
-					'validate_callback' => 'tkpe_validate_product_status',
-				),
-				'page' => array(
-					'type'              => 'integer',
-					'required'          => false,
-					'default'           => 1,
-					'minimum'           => 1,
-					'sanitize_callback' => 'absint',
-				),
-				'per_page' => array(
-					'type'              => 'integer',
-					'required'          => false,
-					'default'           => 10,
-					'sanitize_callback' => 'absint',
-					'validate_callback' => 'tkpe_validate_per_page',
-				),
+	check_ajax_referer( 'tkpe_admin_nonce', 'nonce' );
+
+	if ( ! current_user_can( 'manage_woocommerce' ) ) {
+
+		wp_send_json_error(
+			array(
+				'message' => __( 'You do not have permission to perform this action.', 'tajirkendro-price-editor' ),
 			),
-		)
-	);
-
-}
-
-add_action( 'rest_api_init', 'tkpe_register_product_rest_route' );
-
-
-/**
- * Check permission for the product REST endpoint.
- *
- * WordPress REST cookie authentication verifies the wp_rest nonce
- * sent by the browser. This callback additionally restricts access
- * to users who can manage WooCommerce.
- *
- * @return bool
- */
-function tkpe_product_rest_permission() {
-
-	return current_user_can( 'manage_woocommerce' );
-
-}
-
-
-/**
- * Validate the product type.
- *
- * @param mixed           $value   Requested product type.
- * @param WP_REST_Request $request REST request.
- * @param string          $param   Parameter name.
- * @return bool|WP_Error
- */
-function tkpe_validate_product_type( $value, $request, $param ) {
-
-	$allowed_types = array(
-		'',
-		'simple',
-		'variable',
-		'grouped',
-		'external',
-	);
-
-	if ( in_array( $value, $allowed_types, true ) ) {
-		return true;
+			403
+		);
 	}
+}
 
-	return new WP_Error(
-		'tkpe_invalid_product_type',
-		__( 'Invalid product type.', 'tajirkendro-price-editor' ),
+
+/**
+ * Get filter options.
+ *
+ * @return array
+ */
+function tkpe_get_filter_options() {
+
+	$categories = get_terms(
 		array(
-			'status' => 400,
+			'taxonomy'   => 'product_cat',
+			'hide_empty' => false,
+			'orderby'    => 'name',
+			'order'      => 'ASC',
 		)
 	);
 
-}
-
-
-/**
- * Validate the stock status.
- *
- * @param mixed           $value   Requested stock status.
- * @param WP_REST_Request $request REST request.
- * @param string          $param   Parameter name.
- * @return bool|WP_Error
- */
-function tkpe_validate_stock_status( $value, $request, $param ) {
-
-	$allowed_statuses = array(
-		'',
-		'instock',
-		'outofstock',
-		'onbackorder',
-	);
-
-	if ( in_array( $value, $allowed_statuses, true ) ) {
-		return true;
+	if ( is_wp_error( $categories ) ) {
+		$categories = array();
 	}
 
-	return new WP_Error(
-		'tkpe_invalid_stock_status',
-		__( 'Invalid stock status.', 'tajirkendro-price-editor' ),
-		array(
-			'status' => 400,
-		)
-	);
 
-}
-
-
-/**
- * Validate the product status.
- *
- * @param mixed           $value   Requested product status.
- * @param WP_REST_Request $request REST request.
- * @param string          $param   Parameter name.
- * @return bool|WP_Error
- */
-function tkpe_validate_product_status( $value, $request, $param ) {
-
-	$allowed_statuses = array(
-		'',
-		'publish',
-		'draft',
-		'pending',
-		'private',
-	);
-
-	if ( in_array( $value, $allowed_statuses, true ) ) {
-		return true;
-	}
-
-	return new WP_Error(
-		'tkpe_invalid_product_status',
-		__( 'Invalid product status.', 'tajirkendro-price-editor' ),
-		array(
-			'status' => 400,
-		)
-	);
-
-}
-
-
-/**
- * Validate products per page.
- *
- * @param mixed           $value   Requested number of products per page.
- * @param WP_REST_Request $request REST request.
- * @param string          $param   Parameter name.
- * @return bool|WP_Error
- */
-function tkpe_validate_per_page( $value, $request, $param ) {
-
-	$value = absint( $value );
-
-	if ( in_array( $value, array( 10, 20, 30, 50 ), true ) ) {
-		return true;
-	}
-
-	return new WP_Error(
-		'tkpe_invalid_per_page',
-		__( 'Products per page must be 10, 20, 30, or 50.', 'tajirkendro-price-editor' ),
-		array(
-			'status' => 400,
-		)
-	);
-
-}
-
-
-/**
- * Get products for the REST endpoint.
- *
- * @param WP_REST_Request $request REST request.
- * @return WP_REST_Response|WP_Error
- */
-function tkpe_get_products_rest( WP_REST_Request $request ) {
-
-	$search       = $request->get_param( 'search' );
-	$category     = $request->get_param( 'category' );
-	$type         = $request->get_param( 'type' );
-	$stock_status = $request->get_param( 'stock_status' );
-	$status       = $request->get_param( 'status' );
-	$page         = max( 1, absint( $request->get_param( 'page' ) ) );
-	$per_page     = absint( $request->get_param( 'per_page' ) );
-
-	if ( ! in_array( $per_page, array( 10, 20, 30, 50 ), true ) ) {
-		$per_page = 10;
-	}
-
-	/**
-	 * Validate the selected category before passing it to WooCommerce.
+	/*
+	 * Get registered WordPress post statuses.
+	 *
+	 * Product statuses are WordPress post statuses because
+	 * WooCommerce products are stored as the "product" post type.
 	 */
-	if ( ! empty( $category ) ) {
+	$product_statuses = get_post_statuses();
 
-		$category_term = get_term_by(
-			'slug',
-			$category,
+
+	return array(
+		'categories'     => $categories,
+
+		'types'          => function_exists( 'wc_get_product_types' )
+			? wc_get_product_types()
+			: array(),
+
+		'stock_statuses' => function_exists( 'wc_get_product_stock_status_options' )
+			? wc_get_product_stock_status_options()
+			: array(),
+
+		'statuses'       => $product_statuses,
+	);
+}
+
+
+/**
+ * Get products by search.
+ *
+ * Search is independent from filters.
+ *
+ * @param string $search Search term.
+ * @param int    $limit  Number of products.
+ * @return WC_Product[]
+ */
+function tkpe_get_products_by_search( $search, $limit = 20 ) {
+
+	$search = sanitize_text_field( $search );
+
+	if ( '' === $search ) {
+		return array();
+	}
+
+	return wc_get_products(
+		array(
+			'search' => $search,
+			'status' => array(
+				'publish',
+				'draft',
+				'pending',
+				'private',
+			),
+			'limit'  => absint( $limit ),
+			'return' => 'objects',
+		)
+	);
+}
+
+
+/**
+ * Get products by filters.
+ *
+ * Search is deliberately not accepted here.
+ *
+ * @param array $filters Filter values.
+ * @param int   $limit   Number of products.
+ * @return WC_Product[]
+ */
+function tkpe_get_products_by_filters( $filters = array(), $limit = 20 ) {
+
+	$args = array(
+		'status' => array(
+			'publish',
+			'draft',
+			'pending',
+			'private',
+		),
+		'limit'  => absint( $limit ),
+		'return' => 'objects',
+	);
+
+	/*
+	 * Category.
+	 *
+	 * The admin form sends the category term ID.
+	 * WooCommerce product queries expect category slugs.
+	 */
+	if ( ! empty( $filters['category'] ) ) {
+
+		$category = get_term(
+			absint( $filters['category'] ),
 			'product_cat'
 		);
 
-		if ( ! $category_term || is_wp_error( $category_term ) ) {
-			return new WP_Error(
-				'tkpe_invalid_category',
-				__( 'Invalid product category.', 'tajirkendro-price-editor' ),
-				array(
-					'status' => 400,
-				)
+		if ( $category && ! is_wp_error( $category ) ) {
+
+			$args['category'] = array(
+				$category->slug,
 			);
 		}
 	}
 
-	$query_args = array(
-		'limit'    => $per_page,
-		'page'     => $page,
-		'paginate' => true,
-		'orderby'  => 'title',
-		'order'    => 'ASC',
-	);
 
-	if ( '' !== $search ) {
-		$query_args['s'] = $search;
-	}
-
-	if ( '' !== $category ) {
-		$query_args['category'] = array( $category );
-	}
-
-	if ( '' !== $type ) {
-		$query_args['type'] = array( $type );
-	}
-
-	if ( '' !== $stock_status ) {
-		$query_args['stock_status'] = $stock_status;
-	}
-
-	if ( '' !== $status ) {
-		$query_args['status'] = $status;
-	}
-
-	$results = wc_get_products( $query_args );
-
-	if ( ! is_object( $results ) || ! isset( $results->products, $results->total, $results->max_num_pages ) ) {
-		return new WP_Error(
-			'tkpe_product_query_failed',
-			__( 'Unable to retrieve products.', 'tajirkendro-price-editor' ),
-			array(
-				'status' => 500,
-			)
-		);
-	}
-
-	$products = $results->products;
-
-	/**
-	 * Collect category IDs from only the current page.
+	/*
+	 * Product type.
 	 */
-	$category_ids = array();
+	if ( ! empty( $filters['type'] ) ) {
 
-	foreach ( $products as $product ) {
-
-		$product_category_ids = $product->get_category_ids();
-
-		if ( ! empty( $product_category_ids ) ) {
-			$category_ids = array_merge( $category_ids, $product_category_ids );
-		}
+		$args['type'] = sanitize_key(
+			$filters['type']
+		);
 	}
 
-	$category_ids = array_values( array_unique( array_map( 'absint', $category_ids ) ) );
 
-	/**
-	 * Resolve all category names with one taxonomy query.
+	/*
+	 * Stock status.
 	 */
-	$category_map = array();
+	if ( ! empty( $filters['stock_status'] ) ) {
 
-	if ( ! empty( $category_ids ) ) {
-
-		$category_terms = get_terms(
-			array(
-				'taxonomy'   => 'product_cat',
-				'include'    => $category_ids,
-				'hide_empty' => false,
-			)
-		);
-
-		if ( ! is_wp_error( $category_terms ) ) {
-
-			foreach ( $category_terms as $category_term ) {
-				$category_map[ $category_term->term_id ] = $category_term->name;
-			}
-		}
-	}
-
-	$product_data = array();
-
-	foreach ( $products as $product ) {
-
-		$product_category_names = array();
-
-		foreach ( $product->get_category_ids() as $category_id ) {
-
-			if ( isset( $category_map[ $category_id ] ) ) {
-				$product_category_names[] = $category_map[ $category_id ];
-			}
-		}
-
-		$product_data[] = array(
-			'id'            => $product->get_id(),
-			'name'          => $product->get_name(),
-			'image'         => $product->get_image_id()
-				? wp_get_attachment_image_url( $product->get_image_id(), 'thumbnail' )
-				: '',
-			'categories'    => $product_category_names,
-			'type'          => $product->get_type(),
-			'status'        => $product->get_status(),
-			'stock_status'  => $product->get_stock_status(),
-			'regular_price' => $product->get_regular_price(),
-			'sale_price'   => $product->get_sale_price(),
+		$args['stock_status'] = sanitize_key(
+			$filters['stock_status']
 		);
 	}
 
-	$response = array(
-		'products' => $product_data,
-		'total'    => (int) $results->total,
-		'pages'    => (int) $results->max_num_pages,
-		'page'     => $page,
-		'per_page' => $per_page,
-	);
 
-	return rest_ensure_response( $response );
+	/*
+	 * Product status.
+	 */
+	if ( ! empty( $filters['status'] ) ) {
 
+		$args['status'] = sanitize_key(
+			$filters['status']
+		);
+	}
+
+
+	return wc_get_products( $args );
 }
+
+
+/**
+ * Get product search suggestions.
+ *
+ * Searches product names and SKUs independently from filters.
+ *
+ * @param string $search Search term.
+ * @param int    $limit  Maximum number of suggestions.
+ * @return WC_Product[]
+ */
+function tkpe_get_search_suggestions( $search, $limit = 8 ) {
+
+	global $wpdb;
+
+	$search = sanitize_text_field( $search );
+	$limit  = absint( $limit );
+
+	if ( '' === $search || 0 === $limit ) {
+		return array();
+	}
+
+	$search_like = '%' . $wpdb->esc_like( $search ) . '%';
+
+	$product_ids = $wpdb->get_col(
+		$wpdb->prepare(
+			"
+			SELECT DISTINCT posts.ID
+			FROM {$wpdb->posts} AS posts
+
+			LEFT JOIN {$wpdb->postmeta} AS sku_meta
+				ON posts.ID = sku_meta.post_id
+				AND sku_meta.meta_key = '_sku'
+
+			WHERE posts.post_type = 'product'
+
+			AND posts.post_status IN (
+				'publish',
+				'draft',
+				'pending',
+				'private'
+			)
+
+			AND (
+				posts.post_title LIKE %s
+				OR sku_meta.meta_value LIKE %s
+			)
+
+			ORDER BY
+				CASE
+					WHEN posts.post_title LIKE %s THEN 0
+					WHEN sku_meta.meta_value LIKE %s THEN 1
+					ELSE 2
+				END,
+				posts.post_title ASC
+
+			LIMIT %d
+			",
+			$search_like,
+			$search_like,
+			$search_like,
+			$search_like,
+			$limit
+		)
+	);
+
+	if ( empty( $product_ids ) ) {
+		return array();
+	}
+
+	$products = array();
+
+	foreach ( $product_ids as $product_id ) {
+
+		$product = wc_get_product( $product_id );
+
+		if ( ! $product ) {
+			continue;
+		}
+
+		$products[] = $product;
+	}
+
+	return $products;
+}
+
+
+/**
+ * Prepare product data for JavaScript.
+ *
+ * @param WC_Product[] $products Products.
+ * @return array
+ */
+function tkpe_prepare_products( $products ) {
+
+	$data = array();
+
+	foreach ( $products as $product ) {
+
+		$image_id  = $product->get_image_id();
+		$image_url = $image_id
+			? wp_get_attachment_image_url( $image_id, 'thumbnail' )
+			: wc_placeholder_img_src( 'thumbnail' );
+
+		$type = $product->get_type();
+
+		$type_labels = function_exists( 'wc_get_product_types' )
+			? wc_get_product_types()
+			: array();
+
+		$status_labels = function_exists( 'wc_get_product_statuses' )
+			? wc_get_product_statuses()
+			: array();
+
+		$stock_labels = function_exists( 'wc_get_product_stock_status_options' )
+			? wc_get_product_stock_status_options()
+			: array();
+
+		$stock_status = $product->get_stock_status();
+
+		$data[] = array(
+			'id'              => $product->get_id(),
+			'name'            => $product->get_name(),
+			'image'           => $image_url,
+			'type'            => $type,
+			'type_label'      => isset( $type_labels[ $type ] )
+				? $type_labels[ $type ]
+				: ucfirst( $type ),
+			'status'          => $product->get_status(),
+			'status_label'    => isset( $status_labels[ $product->get_status() ] )
+				? $status_labels[ $product->get_status() ]
+				: ucfirst( $product->get_status() ),
+			'stock_status'    => $stock_status,
+			'stock_label'     => isset( $stock_labels[ $stock_status ] )
+				? $stock_labels[ $stock_status ]
+				: ucfirst( $stock_status ),
+			'stock_quantity'  => $product->get_stock_quantity(),
+			'manage_stock'    => $product->managing_stock(),
+			'regular_price'   => $product->get_regular_price(),
+			'sale_price'      => $product->get_sale_price(),
+			'price'           => $product->get_price(),
+		);
+	}
+
+	return $data;
+}
+
+
+/**
+ * AJAX: Search suggestions.
+ *
+ * @return void
+ */
+function tkpe_ajax_search_suggestions() {
+
+	tkpe_verify_ajax_request();
+
+	$search = isset( $_POST['search'] )
+		? sanitize_text_field( wp_unslash( $_POST['search'] ) )
+		: '';
+
+	if ( strlen( $search ) < 2 ) {
+
+		wp_send_json_success(
+			array(
+				'suggestions' => array(),
+			)
+		);
+	}
+
+	$products = tkpe_get_search_suggestions( $search, 8 );
+
+	$suggestions = array();
+
+	foreach ( $products as $product ) {
+
+		$image_id = $product->get_image_id();
+
+		$suggestions[] = array(
+			'id'    => $product->get_id(),
+			'name'  => $product->get_name(),
+			'sku'   => $product->get_sku(),
+			'image' => $image_id
+				? wp_get_attachment_image_url(
+					$image_id,
+					'thumbnail'
+				)
+				: wc_placeholder_img_src( 'thumbnail' ),
+		);
+	}
+
+	wp_send_json_success(
+		array(
+			'suggestions' => $suggestions,
+		)
+	);
+}
+
+add_action(
+	'wp_ajax_tkpe_search_suggestions',
+	'tkpe_ajax_search_suggestions'
+);
+
+
+/**
+ * AJAX: Search products.
+ *
+ * @return void
+ */
+function tkpe_ajax_search_products() {
+
+	tkpe_verify_ajax_request();
+
+	$search = isset( $_POST['search'] )
+		? sanitize_text_field( wp_unslash( $_POST['search'] ) )
+		: '';
+
+	if ( '' === $search ) {
+
+		wp_send_json_error(
+			array(
+				'message' => __( 'Please enter a search term.', 'tajirkendro-price-editor' ),
+			)
+		);
+	}
+
+	$products = tkpe_get_products_by_search( $search );
+
+	wp_send_json_success(
+		array(
+			'source'   => 'search',
+			'products' => tkpe_prepare_products( $products ),
+		)
+	);
+}
+
+add_action(
+	'wp_ajax_tkpe_search_products',
+	'tkpe_ajax_search_products'
+);
+
+
+/**
+ * AJAX: Filter products.
+ *
+ * @return void
+ */
+function tkpe_ajax_filter_products() {
+
+	tkpe_verify_ajax_request();
+
+	$filters = array(
+		'category'     => isset( $_POST['category'] )
+			? absint( $_POST['category'] )
+			: 0,
+		'type'         => isset( $_POST['type'] )
+			? sanitize_key( wp_unslash( $_POST['type'] ) )
+			: '',
+		'stock_status' => isset( $_POST['stock_status'] )
+			? sanitize_key( wp_unslash( $_POST['stock_status'] ) )
+			: '',
+		'status'       => isset( $_POST['status'] )
+			? sanitize_key( wp_unslash( $_POST['status'] ) )
+			: '',
+	);
+
+	$products = tkpe_get_products_by_filters( $filters );
+
+	wp_send_json_success(
+		array(
+			'source'   => 'filter',
+			'products' => tkpe_prepare_products( $products ),
+		)
+	);
+}
+
+add_action(
+	'wp_ajax_tkpe_filter_products',
+	'tkpe_ajax_filter_products'
+);
+
+
+/**
+ * AJAX: Get one selected product.
+ *
+ * @return void
+ */
+function tkpe_ajax_get_selected_product() {
+
+	tkpe_verify_ajax_request();
+
+	$product_id = isset( $_POST['product_id'] )
+		? absint( $_POST['product_id'] )
+		: 0;
+
+	if ( ! $product_id ) {
+
+		wp_send_json_error(
+			array(
+				'message' => __( 'Invalid product.', 'tajirkendro-price-editor' ),
+			)
+		);
+	}
+
+	$product = wc_get_product( $product_id );
+
+	if ( ! $product ) {
+
+		wp_send_json_error(
+			array(
+				'message' => __( 'Product not found.', 'tajirkendro-price-editor' ),
+			)
+		);
+	}
+
+	wp_send_json_success(
+		array(
+			'source'   => 'selected_product',
+			'products' => tkpe_prepare_products(
+				array( $product )
+			),
+		)
+	);
+}
+
+add_action(
+	'wp_ajax_tkpe_get_selected_product',
+	'tkpe_ajax_get_selected_product'
+);

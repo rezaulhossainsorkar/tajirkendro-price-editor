@@ -1,8 +1,6 @@
 <?php
 /**
- * KTPE admin page header.
- *
- * @package TajirKendro_Price_Editor
+ * TKPE admin page header.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -10,7 +8,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 ?>
 
-<div class="wrap tkpe-admin-page">
+<div class="wrap tkpe-wrap">
+
 	<h1 class="wp-heading-inline">
 		<?php esc_html_e( 'TajirKendro Price Editor', 'tajirkendro-price-editor' ); ?>
 	</h1>

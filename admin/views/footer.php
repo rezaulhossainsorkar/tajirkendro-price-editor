@@ -1,8 +1,6 @@
 <?php
 /**
- * KTPE admin page footer.
- *
- * @package TajirKendro_Price_Editor
+ * TKPE admin page footer.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

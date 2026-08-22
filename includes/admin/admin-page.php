@@ -1,8 +1,6 @@
 <?php
 /**
- * KTPE admin page.
- *
- * @package TajirKendro_Price_Editor
+ * TKPE admin page.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -11,9 +9,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 
 /**
- * Enqueue KTPE admin assets.
+ * Enqueue TKPE admin assets.
  *
- * @param string $hook_suffix Current admin page hook suffix.
+ * @param string $hook_suffix Current admin page hook.
  * @return void
  */
 function tkpe_enqueue_admin_assets( $hook_suffix ) {
@@ -30,9 +28,31 @@ function tkpe_enqueue_admin_assets( $hook_suffix ) {
 	);
 
 	wp_enqueue_script(
-		'tkpe-admin-products',
-		TKPE_PLUGIN_URL . 'admin/assets/js/admin-products.js',
-		array(),
+	'tkpe-admin-products',
+	TKPE_PLUGIN_URL . 'admin/assets/js/admin-products.js',
+	array( 'jquery' ),
+	TKPE_VERSION,
+	true
+	);
+
+	wp_enqueue_script(
+		'tkpe-admin-quick-edit',
+		TKPE_PLUGIN_URL . 'admin/assets/js/admin-quick-edit.js',
+		array(
+			'jquery',
+			'tkpe-admin-products',
+		),
+		TKPE_VERSION,
+		true
+	);
+
+	wp_enqueue_script(
+		'tkpe-admin-bulk-edit',
+		TKPE_PLUGIN_URL . 'admin/assets/js/admin-bulk-edit.js',
+		array(
+			'jquery',
+			'tkpe-admin-products',
+		),
 		TKPE_VERSION,
 		true
 	);
@@ -41,73 +61,29 @@ function tkpe_enqueue_admin_assets( $hook_suffix ) {
 		'tkpe-admin-products',
 		'tkpeAdmin',
 		array(
-			'restUrl' => esc_url_raw( rest_url( 'tkpe/v1/products' ) ),
-			'nonce'   => wp_create_nonce( 'wp_rest' ),
-			'i18n'    => array(
-				'loading'       => __( 'Loading products…', 'tajirkendro-price-editor' ),
-				'noProducts'    => __( 'No products found.', 'tajirkendro-price-editor' ),
-				'error'         => __( 'Unable to load products. Please try again.', 'tajirkendro-price-editor' ),
-				'noSalePrice'   => __( 'No sale price', 'tajirkendro-price-editor' ),
-				'previous'      => __( 'Previous', 'tajirkendro-price-editor' ),
-				'next'          => __( 'Next', 'tajirkendro-price-editor' ),
-				'page'          => __( 'Page', 'tajirkendro-price-editor' ),
-				'of'            => __( 'of', 'tajirkendro-price-editor' ),
-				'products'      => __( 'products', 'tajirkendro-price-editor' ),
-				'regular'       => __( 'Regular', 'tajirkendro-price-editor' ),
-				'sale'          => __( 'Sale', 'tajirkendro-price-editor' ),
-				'uncategorized' => __( 'Uncategorized', 'tajirkendro-price-editor' ),
-			),
+			'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+			'nonce'   => wp_create_nonce( 'tkpe_admin_nonce' ),
 		)
 	);
-
 }
 
 add_action( 'admin_enqueue_scripts', 'tkpe_enqueue_admin_assets' );
 
 
 /**
- * Get product categories for the filter.
- *
- * @return WP_Term[]
- */
-function tkpe_get_product_categories() {
-
-	$categories = get_terms(
-		array(
-			'taxonomy'   => 'product_cat',
-			'hide_empty' => false,
-			'orderby'    => 'name',
-			'order'      => 'ASC',
-		)
-	);
-
-	if ( is_wp_error( $categories ) ) {
-		return array();
-	}
-
-	return $categories;
-
-}
-
-
-/**
- * Render the KTPE admin page.
+ * Render TKPE admin page.
  *
  * @return void
  */
 function tkpe_render_admin_page() {
 
-	if ( ! current_user_can( 'manage_woocommerce' ) ) {
-		wp_die(
-			esc_html__( 'You do not have permission to access this page.', 'tajirkendro-price-editor' )
-		);
-	}
-
-	$categories = tkpe_get_product_categories();
-
 	require TKPE_PLUGIN_PATH . 'admin/views/header.php';
-	require TKPE_PLUGIN_PATH . 'admin/views/filters.php';
-	require TKPE_PLUGIN_PATH . 'admin/views/product-table.php';
-	require TKPE_PLUGIN_PATH . 'admin/views/footer.php';
 
+	require TKPE_PLUGIN_PATH . 'admin/views/search&filter.php';
+
+	require TKPE_PLUGIN_PATH . 'admin/views/bulk-tab-table.php';
+
+	require TKPE_PLUGIN_PATH . 'admin/views/quick-tab-table.php';
+
+	require TKPE_PLUGIN_PATH . 'admin/views/footer.php';
 }
