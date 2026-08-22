@@ -313,14 +313,18 @@ function tkpe_ajax_update_product() {
 	}
 
 	/*
-	 * Return the updated lightweight product data.
-	 */
+	* Return the updated lightweight product data.
+	*/
+	$prepared_products = tkpe_prepare_products(
+		array( $product )
+	);
+
 	wp_send_json_success(
 		array(
 			'message' => __( 'Product updated successfully.', 'tajirkendro-price-editor' ),
-			'product' => tkpe_prepare_products(
-				array( $product )
-			),
+			'product' => isset( $prepared_products[0] )
+				? $prepared_products[0]
+				: array(),
 		)
 	);
 }

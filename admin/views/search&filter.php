@@ -12,48 +12,6 @@ $filter_options = tkpe_get_filter_options();
 
 <div class="tkpe-controls">
 
-	<div class="tkpe-search-section">
-
-		<form id="tkpe-search-form" class="tkpe-search-form">
-
-			<div class="tkpe-search-field">
-
-				<label for="tkpe-search">
-					<?php esc_html_e( 'Search Products', 'tajirkendro-price-editor' ); ?>
-				</label>
-
-				<div class="tkpe-search-input-wrapper">
-
-					<input
-						type="search"
-						id="tkpe-search"
-						name="search"
-						placeholder="<?php esc_attr_e( 'Search product name or SKU...', 'tajirkendro-price-editor' ); ?>"
-						autocomplete="off"
-					>
-
-					<div
-						id="tkpe-search-suggestions"
-						class="tkpe-search-suggestions"
-						hidden
-					></div>
-
-				</div>
-
-			</div>
-
-			<button
-				type="submit"
-				class="button button-primary"
-			>
-				<?php esc_html_e( 'Search', 'tajirkendro-price-editor' ); ?>
-			</button>
-
-		</form>
-
-	</div>
-
-
 	<div class="tkpe-filter-section">
 
 		<form id="tkpe-filter-form">
@@ -161,27 +119,74 @@ $filter_options = tkpe_get_filter_options();
 
 			</div>
 
+		</form>
 
-			<div class="tkpe-filter-actions">
+	</div>
+
+
+	<div class="tkpe-controls-actions">
+
+		<div class="tkpe-filter-actions">
+
+			<button
+				type="submit"
+				form="tkpe-filter-form"
+				class="button button-primary"
+			>
+				<?php esc_html_e( 'Apply Filters', 'tajirkendro-price-editor' ); ?>
+			</button>
+
+			<button
+				type="button"
+				id="tkpe-reset-filters"
+				class="button"
+			>
+				<?php esc_html_e( 'Reset', 'tajirkendro-price-editor' ); ?>
+			</button>
+
+		</div>
+
+
+		<div class="tkpe-search-section">
+
+			<form id="tkpe-search-form" class="tkpe-search-form">
+
+				<div class="tkpe-search-field">
+
+					<label for="tkpe-search">
+						<?php esc_html_e( 'Search Products', 'tajirkendro-price-editor' ); ?>
+					</label>
+
+					<div class="tkpe-search-input-wrapper">
+
+						<input
+							type="search"
+							id="tkpe-search"
+							name="search"
+							placeholder="<?php esc_attr_e( 'Search product name or SKU...', 'tajirkendro-price-editor' ); ?>"
+							autocomplete="off"
+						>
+
+						<div
+							id="tkpe-search-suggestions"
+							class="tkpe-search-suggestions"
+							hidden
+						></div>
+
+					</div>
+
+				</div>
 
 				<button
 					type="submit"
 					class="button button-primary"
 				>
-					<?php esc_html_e( 'Apply Filters', 'tajirkendro-price-editor' ); ?>
+					<?php esc_html_e( 'Search', 'tajirkendro-price-editor' ); ?>
 				</button>
 
-				<button
-					type="button"
-					id="tkpe-reset-filters"
-					class="button"
-				>
-					<?php esc_html_e( 'Reset', 'tajirkendro-price-editor' ); ?>
-				</button>
+			</form>
 
-			</div>
-
-		</form>
+		</div>
 
 	</div>
 

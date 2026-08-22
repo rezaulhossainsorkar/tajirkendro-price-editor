@@ -9,62 +9,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 
 /**
- * Calculate a new price from a pricing rule.
- *
- * @param string $current_price Current price.
- * @param string $method        Pricing method.
- * @param string $value         Rule value.
- * @return string
- */
-function tkpe_calculate_price( $current_price, $method, $value ) {
-
-	if ( '' === $method ) {
-		return $current_price;
-	}
-
-	$current_price = (float) $current_price;
-	$value         = (float) $value;
-
-	switch ( $method ) {
-
-		case 'set':
-			$new_price = $value;
-			break;
-
-		case 'increase_percentage':
-			$new_price = $current_price + (
-				$current_price * ( $value / 100 )
-			);
-			break;
-
-		case 'decrease_percentage':
-			$new_price = $current_price - (
-				$current_price * ( $value / 100 )
-			);
-			break;
-
-		case 'increase_fixed':
-			$new_price = $current_price + $value;
-			break;
-
-		case 'decrease_fixed':
-			$new_price = $current_price - $value;
-			break;
-
-		default:
-			return $current_price;
-	}
-
-	/*
-	 * A price must never become negative.
-	 */
-	$new_price = max( 0, $new_price );
-
-	return wc_format_decimal( $new_price );
-}
-
-
-/**
  * Validate pricing rule.
  *
  * @param array $rule Pricing rule.
@@ -88,6 +32,10 @@ function tkpe_validate_pricing_rule( $rule ) {
 		? wc_format_decimal( $rule['value'] )
 		: '';
 
+	/*
+	 * An empty method means that the
+	 * corresponding price should not change.
+	 */
 	if ( '' === $method ) {
 		return true;
 	}
@@ -123,6 +71,10 @@ function tkpe_validate_pricing_rule( $rule ) {
 /**
  * Apply pricing rule to a product price.
  *
+ * The actual price calculation is handled by the
+ * shared tkpe_calculate_price() function in
+ * product-updater.php.
+ *
  * @param string $current_price Current price.
  * @param array  $rule          Pricing rule.
  * @return string|WP_Error
@@ -143,6 +95,18 @@ function tkpe_apply_pricing_rule( $current_price, $rule ) {
 		? wc_format_decimal( $rule['value'] )
 		: '';
 
+	/*
+	 * No method means that the current price
+	 * should remain unchanged.
+	 */
+	if ( '' === $method ) {
+		return $current_price;
+	}
+
+	/*
+	 * Use the shared calculation function
+	 * declared in product-updater.php.
+	 */
 	return tkpe_calculate_price(
 		$current_price,
 		$method,
@@ -153,6 +117,8 @@ function tkpe_apply_pricing_rule( $current_price, $rule ) {
 
 /**
  * Update a simple product.
+ *
+ * This function is specific to Quick Edit.
  *
  * @param WC_Product $product Product.
  * @param array      $pricing Pricing rules.
@@ -183,9 +149,11 @@ function tkpe_update_simple_product( $product, $pricing ) {
 			return $result;
 		}
 
-		if (
-			'' !== $pricing['regular']['method']
-		) {
+		$regular_method = isset( $pricing['regular']['method'] )
+			? sanitize_key( $pricing['regular']['method'] )
+			: '';
+
+		if ( '' !== $regular_method ) {
 			$product->set_regular_price( $result );
 		}
 	}
@@ -203,10 +171,14 @@ function tkpe_update_simple_product( $product, $pricing ) {
 		 * an increase/decrease operation is requested,
 		 * there is no meaningful base value.
 		 */
+		$sale_method = isset( $pricing['sale']['method'] )
+			? sanitize_key( $pricing['sale']['method'] )
+			: '';
+
 		if (
 			'' === $current_sale_price &&
-			! empty( $pricing['sale']['method'] ) &&
-			'set' !== $pricing['sale']['method']
+			'' !== $sale_method &&
+			'set' !== $sale_method
 		) {
 
 			return new WP_Error(
@@ -227,9 +199,7 @@ function tkpe_update_simple_product( $product, $pricing ) {
 			return $result;
 		}
 
-		if (
-			'' !== $pricing['sale']['method']
-		) {
+		if ( '' !== $sale_method ) {
 			$product->set_sale_price( $result );
 		}
 	}
@@ -258,217 +228,3 @@ function tkpe_update_simple_product( $product, $pricing ) {
 
 	return true;
 }
-
-
-/**
- * Update variable product variations.
- *
- * @param WC_Product_Variable $product    Variable product.
- * @param array               $variations Variation rules.
- * @return true|WP_Error
- */
-function tkpe_update_variable_product( $product, $variations ) {
-
-	if ( ! is_array( $variations ) ) {
-
-		return new WP_Error(
-			'invalid_variations',
-			__( 'Invalid variation data.', 'tajirkendro-price-editor' )
-		);
-	}
-
-	foreach ( $variations as $variation_data ) {
-
-		if (
-			! is_array( $variation_data ) ||
-			empty( $variation_data['id'] )
-		) {
-			continue;
-		}
-
-		$variation_id = absint(
-			$variation_data['id']
-		);
-
-		$variation = wc_get_product(
-			$variation_id
-		);
-
-		if (
-			! $variation ||
-			'variation' !== $variation->get_type()
-		) {
-			continue;
-		}
-
-		/*
-		 * Make sure this variation actually belongs
-		 * to the variable product being edited.
-		 */
-		if (
-			(int) $variation->get_parent_id() !==
-			(int) $product->get_id()
-		) {
-			continue;
-		}
-
-		$pricing = isset( $variation_data['pricing'] )
-			? $variation_data['pricing']
-			: array();
-
-		$result = tkpe_update_simple_product(
-			$variation,
-			$pricing
-		);
-
-		if ( is_wp_error( $result ) ) {
-			return $result;
-		}
-
-		$variation->save();
-	}
-
-	return true;
-}
-
-
-/**
- * AJAX: Update product from Quick Edit.
- *
- * @return void
- */
-function tkpe_ajax_update_product() {
-
-	tkpe_verify_ajax_request();
-
-	$product_id = isset( $_POST['product_id'] )
-		? absint( $_POST['product_id'] )
-		: 0;
-
-	if ( ! $product_id ) {
-
-		wp_send_json_error(
-			array(
-				'message' => __(
-					'Invalid product.',
-					'tajirkendro-price-editor'
-				),
-			)
-		);
-	}
-
-	$product = wc_get_product( $product_id );
-
-	if ( ! $product ) {
-
-		wp_send_json_error(
-			array(
-				'message' => __(
-					'Product not found.',
-					'tajirkendro-price-editor'
-				),
-			)
-		);
-	}
-
-
-	/*
-	 * Normal product.
-	 */
-	if (
-		isset( $_POST['pricing'] ) &&
-		is_array( $_POST['pricing'] )
-	) {
-
-		$pricing = wp_unslash(
-			$_POST['pricing']
-		);
-
-		$result = tkpe_update_simple_product(
-			$product,
-			$pricing
-		);
-
-		if ( is_wp_error( $result ) ) {
-
-			wp_send_json_error(
-				array(
-					'message' => $result->get_error_message(),
-				)
-			);
-		}
-
-		$product->save();
-	}
-
-
-	/*
-	 * Variable product.
-	 */
-	if (
-		'variable' === $product->get_type() &&
-		isset( $_POST['variations'] ) &&
-		is_array( $_POST['variations'] )
-	) {
-
-		$variations = wp_unslash(
-			$_POST['variations']
-		);
-
-		$result = tkpe_update_variable_product(
-			$product,
-			$variations
-		);
-
-		if ( is_wp_error( $result ) ) {
-
-			wp_send_json_error(
-				array(
-					'message' => $result->get_error_message(),
-				)
-			);
-		}
-
-		/*
-		 * Recalculate the variable product's
-		 * cached pricing after variation changes.
-		 */
-		$product->save();
-	}
-
-
-	/*
-	 * Re-fetch the product after saving.
-	 *
-	 * This guarantees that the browser receives
-	 * WooCommerce's actual final values.
-	 */
-	$product = wc_get_product( $product_id );
-
-	if ( ! $product ) {
-
-		wp_send_json_error(
-			array(
-				'message' => __(
-					'Unable to retrieve the updated product.',
-					'tajirkendro-price-editor'
-				),
-			)
-		);
-	}
-
-	$product_data = tkpe_prepare_products(
-		array( $product )
-	);
-
-	wp_send_json_success(
-		array(
-			'product' => $product_data[0],
-		)
-	);
-}
-
-add_action(
-	'wp_ajax_tkpe_update_product',
-	'tkpe_ajax_update_product'
-);
